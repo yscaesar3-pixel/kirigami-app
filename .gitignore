@@ -1,0 +1,14 @@
+node_modules/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+ios/App/Pods/
+ios/App/output/
+ios/App/DerivedData/
+.DS_Store
+*.log
+
+Admob_きりがみ.txt
+Screenshot_*.png

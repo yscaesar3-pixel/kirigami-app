@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>きりがみ ― 折って、切って、ひらく</title>
+
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#FF6B8B">
+<meta name="background-color" content="#FFF3D6">
+<meta name="description" content="紙を折って、切って、ひらく。切り紙シミュレーター。">
+
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="./icons/favicon-64.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="きりがみ">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF3D6;
+    --bg2:#FFE3EE;
+    --card:#FFFDF8;
+    --ink:#2B2140;
+    --text:#2B2140;
+    --text-soft:#6B5E85;
+
+    --pink:#FF6B8B;
+    --pink-deep:#E14E70;
+    --orange:#FF9F45;
+    --orange-deep:#E8822A;
+    --yellow:#FFD23F;
+    --yellow-deep:#E8B400;
+    --green:#3ECF8E;
+    --green-deep:#22B274;
+    --teal:#2EC4C6;
+    --teal-deep:#189C9E;
+    --blue:#4C8BF5;
+    --blue-deep:#2E6BD6;
+    --purple:#9B6BFF;
+    --purple-deep:#7C46E8;
+    --red:#FF5A5F;
+    --red-deep:#E23E43;
+
+    /* 既存コードとの互換用エイリアス */
+    --paper:var(--card);
+    --paper-shadow:#FFE9C7;
+    --paper-edge:var(--ink);
+    --ai:var(--blue);
+    --ai-deep:var(--blue-deep);
+    --ai-soft:rgba(76,139,245,.16);
+    --shu:var(--pink-deep);
+    --shu-deep:var(--pink-deep);
+    --shu-soft:rgba(255,107,139,.18);
+    --gold:var(--yellow-deep);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(circle, rgba(255,107,139,.20) 3px, transparent 3.5px),
+      radial-gradient(circle, rgba(46,196,198,.20) 3px, transparent 3.5px),
+      linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
+    background-size: 44px 44px, 44px 44px, 100% 100%;
+    background-position: 0 0, 22px 22px, 0 0;
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'M PLUS Rounded 1c', sans-serif;
+    min-height:100vh;
+    display:flex; justify-content:center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app{ width:100%; max-width:520px; padding:calc(26px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(44px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
+  body.has-banner .app{ padding-bottom:calc(96px + env(safe-area-inset-bottom)); }
+
+  :focus-visible{ outline:3px solid var(--blue); outline-offset:2px; border-radius:8px; }
+
+  header.top{ text-align:center; margin-bottom:6px; }
+  header.top .eyebrow{
+    display:inline-block; font-size:10.5px; letter-spacing:.24em; font-weight:700;
+    color:#fff; background:var(--purple); padding:3px 12px; border-radius:20px;
+    transform:rotate(-2deg);
+  }
+  header.top h1{
+    font-family:'Yusei Magic', sans-serif; font-size:34px; font-weight:400;
+    margin:12px 0 8px; letter-spacing:.03em; color:var(--ink);
+    text-shadow: 3px 3px 0 var(--yellow);
+  }
+  header.top .rule{
+    display:flex; align-items:center; justify-content:center; gap:7px; margin:0 0 12px;
+  }
+  header.top .rule::before, header.top .rule::after{
+    content:""; width:26px; height:4px; border-radius:4px; background:var(--teal);
+  }
+  header.top .rule span{ font-size:14px; }
+  header.top p.sub{ font-size:12.5px; color:var(--text-soft); margin:0; font-weight:500; }
+
+  .steps{ display:flex; align-items:center; justify-content:center; gap:0; margin:22px 0 20px; }
+  .step{ display:flex; flex-direction:column; align-items:center; gap:6px; opacity:.45; transition:opacity .3s, transform .3s; width:78px; }
+  .step.active{opacity:1; transform:translateY(-2px);}
+  .step .dot{
+    width:32px;height:32px;border-radius:50%; background:#fff;
+    border:3px solid var(--ink); display:flex;align-items:center;justify-content:center;
+    font-family:'Yusei Magic', sans-serif; font-size:14px; color:var(--ink);
+    box-shadow:2px 2px 0 var(--ink);
+    transition:background .25s, transform .25s, box-shadow .25s;
+  }
+  .step.active .dot{
+    background:var(--yellow); color:var(--ink); border-color:var(--ink);
+    box-shadow:3px 3px 0 var(--ink);
+  }
+  .step .label{font-size:10.5px; letter-spacing:.03em; color:var(--text-soft); font-weight:700;}
+  .step.active .label{ color:var(--ink); }
+  .step-line{ flex:1; height:0; border-top:3px dotted var(--purple); margin:0 2px; transform:translateY(-15px); opacity:.5; }
+
+  /* ---- カード共通：ステッカー風の太い縁取り＋ハードシャドウ ---- */
+  .stage{
+    background:var(--card);
+    padding:20px 18px 22px;
+    position:relative;
+    border:3px solid var(--ink);
+    border-radius:22px;
+    box-shadow:6px 6px 0 var(--ink);
+  }
+
+  .canvas-wrap{ position:relative; width:100%; aspect-ratio:1/1; display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(circle, rgba(255,210,63,.5) 2px, transparent 2.5px) 0 0/22px 22px,
+      #FFF7E4;
+    border-radius:16px; overflow:hidden; touch-action:none;
+    border:3px solid var(--ink); }
+  canvas{ display:block; width:100%; height:100%; touch-action:none; }
+
+  .hint{ font-size:12.5px; color:var(--text-soft); text-align:center; margin:12px 2px 4px; line-height:1.65; min-height:34px; font-weight:500; }
+  .hint.emph{ color:var(--pink-deep); font-weight:800; }
+
+  .meta-row{ display:flex; justify-content:center; gap:20px; margin:10px 0 4px; font-size:12.5px; color:var(--text-soft); font-weight:600; }
+  .meta-row b{color:var(--pink-deep); font-weight:800;}
+
+  .btn-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .btn-grid.three{grid-template-columns:1fr 1fr 1fr;}
+  button{
+    font-family:'M PLUS Rounded 1c', sans-serif; font-size:13px; font-weight:700; padding:12px 8px; border-radius:14px;
+    border:3px solid var(--ink); background:#fff; color:var(--ink); cursor:pointer;
+    transition:transform .1s ease, box-shadow .1s ease;
+    box-shadow:3px 3px 0 var(--ink);
+    -webkit-tap-highlight-color:transparent;
+  }
+  button:active{ transform:translate(3px,3px); box-shadow:0 0 0 var(--ink); }
+  @media (hover:hover){
+    button:not(:disabled):hover{ filter:brightness(1.04); }
+  }
+  button.primary{
+    background:var(--pink); border-color:var(--ink); color:#fff;
+    grid-column:1/-1; padding:14px 8px; font-size:14.5px; letter-spacing:.02em;
+    box-shadow:3px 3px 0 var(--ink);
+  }
+  button.warn{ background:var(--yellow); border-color:var(--ink); color:var(--ink); }
+  button.ghost{ background:#fff; border-color:var(--text-soft); color:var(--text-soft); box-shadow:2px 2px 0 rgba(43,33,64,.25); }
+  button:disabled{opacity:.4; cursor:default; transform:none !important; box-shadow:none;}
+  #foldV{ background:var(--teal); color:#fff; }
+  #foldH{ background:var(--blue); color:#fff; }
+  #foldD{ background:var(--purple); color:#fff; }
+  .full{grid-column:1/-1;}
+  .toolbar-row{ display:flex; gap:10px; margin-top:10px; }
+  .toolbar-row button{flex:1;}
+
+  footer.note{ margin-top:26px; text-align:center; font-size:11.5px; color:var(--text-soft); line-height:1.85; padding:0 6px; font-weight:500; }
+  footer.note b{color:var(--ink);}
+
+  .result-canvas-wrap{ background:var(--bg); }
+  .fade-in{animation:fadeIn .6s ease both;}
+  @keyframes fadeIn{ from{opacity:0; transform:scale(.92);} to{opacity:1; transform:scale(1);} }
+  @media (prefers-reduced-motion: reduce){
+    .fade-in{animation:none;}
+    *{ transition-duration:.01ms !important; animation-duration:.01ms !important; }
+  }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:4px; font-size:10.5px; letter-spacing:.06em; font-weight:800;
+    color:#fff; background:var(--purple); border:2px solid var(--ink); padding:3px 11px; border-radius:20px;
+    margin-bottom:8px; transform:rotate(-2deg);
+  }
+  .badge.pending{ background:var(--pink); }
+  .badge.gold{ background:var(--yellow); color:var(--ink); }
+  .badge.gold::before{ content:"✦"; font-size:9px; }
+
+  .home-grid{ display:flex; flex-direction:column; gap:14px; }
+  .home-card{
+    display:flex; align-items:center; gap:14px;
+    text-align:left; padding:16px 18px; position:relative;
+    border:3px solid var(--ink); border-radius:20px; background:#fff; color:var(--ink);
+    box-shadow:5px 5px 0 var(--ink);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .home-card:active{ transform:translate(4px,4px); box-shadow:1px 1px 0 var(--ink); }
+  @media (hover:hover){
+    .home-card:hover{ transform:translate(-1px,-1px); box-shadow:7px 7px 0 var(--ink); }
+  }
+  .home-card-icon{
+    flex:none; width:46px; height:46px; border-radius:50%;
+    background:var(--yellow); color:var(--ink); border:2.5px solid var(--ink);
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+  }
+  #goChallenge .home-card-icon{ background:var(--yellow); }
+  #goCreate .home-card-icon{ background:var(--teal); }
+  #goCommunity .home-card-icon{ background:var(--pink); }
+  #goMyworks .home-card-icon{ background:var(--purple); }
+  .home-card-body{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .home-card-title{ font-family:'Yusei Magic', sans-serif; font-size:16.5px; font-weight:400; }
+  .home-card-sub{ font-size:11.5px; color:var(--text-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .home-card-arrow{ margin-left:auto; flex:none; color:var(--ink); font-size:20px; font-weight:800; }
+
+  .text-input{
+    width:100%; font-family:'M PLUS Rounded 1c', sans-serif; font-size:14px; font-weight:600;
+    padding:11px 12px; border:3px solid var(--ink); border-radius:12px;
+    background:#fff; color:var(--text); margin:12px 0 10px;
+  }
+  .text-input:focus{ border-color:var(--blue); }
+
+  .gallery-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;
+  }
+  .gallery-item{
+    background:#fff; border:3px solid var(--ink); border-radius:16px;
+    padding:9px; text-align:left; display:flex; flex-direction:column; gap:6px;
+    box-shadow:4px 4px 0 var(--ink);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .gallery-item:active{ transform:translate(3px,3px); box-shadow:1px 1px 0 var(--ink); }
+  @media (hover:hover){
+    .gallery-item:hover{ transform:translate(-1px,-1px); box-shadow:6px 6px 0 var(--ink); }
+  }
+  .gallery-item img{ width:100%; aspect-ratio:1/1; object-fit:contain; background:#FFF3D6; border-radius:10px; }
+  .gallery-item .g-title{ font-size:12.5px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gallery-item .g-meta{ font-size:11px; color:var(--text-soft); display:flex; justify-content:space-between; font-weight:600; }
+
+  .detail-title{ font-family:'Yusei Magic', sans-serif; font-size:20px; margin:12px 0 4px; font-weight:400; }
+
+  .paper-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .paper-swatch{
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    padding:8px 4px; border-radius:12px; border:3px solid transparent; background:transparent;
+  }
+  .paper-swatch canvas{ width:100%; aspect-ratio:1/1; border-radius:10px; border:2px solid var(--ink); }
+  .paper-swatch .p-name{ font-size:10.5px; line-height:1.3; color:var(--text-soft); text-align:center; font-weight:700; }
+  .paper-swatch.selected{ border-color:var(--pink); }
+  .paper-swatch.selected .p-name{ color:var(--pink-deep); }
+
+  .select-label{
+    display:block; font-size:11.5px; letter-spacing:.03em; color:var(--text-soft); margin-bottom:14px; font-weight:800;
+  }
+  .select-input{
+    display:block; width:100%; margin-top:6px;
+    font-family:'M PLUS Rounded 1c', sans-serif; font-size:14px; font-weight:600;
+    padding:11px 34px 11px 12px; border:3px solid var(--ink); border-radius:12px;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%232B2140'/%3E%3C/svg%3E") no-repeat right 13px center;
+    color:var(--text); appearance:none; -webkit-appearance:none;
+  }
+  .select-input:focus{ border-color:var(--blue); }
+
+  .challenge-banner{
+    display:flex; align-items:center; gap:8px; padding:12px 14px; margin-bottom:14px;
+    background:var(--purple); color:#fff; font-size:12.5px; line-height:1.5; font-weight:600;
+    border:3px solid var(--ink); border-radius:16px;
+  }
+  .challenge-banner b{ display:block; font-family:'Yusei Magic', sans-serif; font-size:15px; margin-bottom:1px; font-weight:400; }
+  .challenge-tag{
+    display:inline-block; font-size:10.5px; color:#fff; background:var(--orange); border:2px solid var(--ink);
+    padding:1px 8px; border-radius:20px; margin-left:6px; font-weight:800;
+  }
+
+  .tool-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .tool-row button{ flex:1; font-size:12.5px; padding:10px 6px; }
+  .tool-row button.active{ background:var(--blue); border-color:var(--ink); color:#fff; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="eyebrow">PAPER CUTTING SIMULATOR ― 試作 v2</div>
+    <h1>きりがみ</h1>
+    <div class="rule"><span>✂️</span></div>
+    <p class="sub">一枚の紙を折って、切って、ひらく。</p>
+  </header>
+
+  <div id="stepsBar" class="steps" style="display:none;">
+    <div class="step" data-step="fold"><div class="dot">壱</div><div class="label">折る</div></div>
+    <div class="step-line"></div>
+    <div class="step" data-step="cut"><div class="dot">弐</div><div class="label">切る</div></div>
+    <div class="step-line"></div>
+    <div class="step" data-step="unfold"><div class="dot">参</div><div class="label">ひらく</div></div>
+  </div>
+
+  <div id="backBar" style="display:none; margin-bottom:12px;">
+    <button class="ghost" id="backHome">← ホームへ</button>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <section class="stage" id="stage-home">
+    <div class="home-grid">
+      <button class="home-card" id="goChallenge">
+        <span class="home-card-icon">🎯</span>
+        <span class="home-card-body">
+          <span class="home-card-title">現在のお題</span>
+          <span class="home-card-sub" id="challengeTeaser">読み込み中…</span>
+        </span>
+        <span class="home-card-arrow">›</span>
+      </button>
+      <button class="home-card" id="goCreate">
+        <span class="home-card-icon">✂️</span>
+        <span class="home-card-body">
+          <span class="home-card-title">じぶんでつくる</span>
+          <span class="home-card-sub">折って、切って、ひらく</span>
+        </span>
+        <span class="home-card-arrow">›</span>
+      </button>
+      <button class="home-card" id="goCommunity">
+        <span class="home-card-icon">🌐</span>
+        <span class="home-card-body">
+          <span class="home-card-title">みんなの作品</span>
+          <span class="home-card-sub">いいねしたり、作り方を見たり</span>
+        </span>
+        <span class="home-card-arrow">›</span>
+      </button>
+      <button class="home-card" id="goMyworks">
+        <span class="home-card-icon">🗂️</span>
+        <span class="home-card-body">
+          <span class="home-card-title">マイ作品</span>
+          <span class="home-card-sub">これまでにつくったもの</span>
+        </span>
+        <span class="home-card-arrow">›</span>
+      </button>
+    </div>
+    <p class="hint" style="margin-top:16px;">
+      「みんなの作品」は現在この端末内のデータのみを表示する試作版です。<br>
+      実際に他の人と共有するには、サーバー（例：Supabase）との接続が次の段階で必要です。
+    </p>
+  </section>
+
+  <!-- ============ CURRENT CHALLENGE PAGE ============ -->
+  <section class="stage" id="stage-challenge">
+    <div class="badge">現在のお題</div>
+    <h2 id="challengePageTitle" class="detail-title"></h2>
+    <button class="primary full" id="challengeCreateBtn">このお題でつくる →</button>
+    <div class="tool-row" style="margin-top:16px;">
+      <button id="challengeSortRecent" class="active">🕒 新着</button>
+      <button id="challengeSortRanking">🏆 いいね順</button>
+    </div>
+    <div id="challengeGrid" class="gallery-grid"></div>
+    <p class="hint" id="challengeEmpty" style="display:none;">まだこのお題の作品がありません。一番乗りしてみませんか？</p>
+  </section>
+
+  <!-- ============ PAPER STYLE PICKER ============ -->
+  <section class="stage" id="stage-paper">
+    <p class="hint">紙の色・柄を選んでください。</p>
+    <div class="canvas-wrap" style="max-width:220px; margin:0 auto 18px;"><canvas id="paperPreview"></canvas></div>
+    <label class="select-label">表の色・柄
+      <select id="frontSelect" class="select-input"></select>
+    </label>
+    <label class="select-label">裏の色
+      <select id="backSelect" class="select-input"></select>
+    </label>
+    <button class="primary full" id="paperNext" style="margin-top:14px;">この紙でつくる →</button>
+  </section>
+
+  <!-- ============ FOLD STAGE ============ -->
+  <section class="stage" id="stage-fold" style="display:none;">
+    <div id="challengeBanner" class="challenge-banner" style="display:none;"></div>
+    <div class="canvas-wrap"><canvas id="foldCanvas"></canvas></div>
+    <p class="hint" id="foldHint">ボタンでサッと折るか、紙の上を指でなぞって好きな位置で折ることもできます。</p>
+    <div class="meta-row">
+      <span>折った回数 : <b id="foldCount">0</b></span>
+      <span>層の数 : <b id="layerCount">1</b></span>
+    </div>
+    <div class="btn-grid three">
+      <button id="foldV">たて折り</button>
+      <button id="foldH">よこ折り</button>
+      <button id="foldD">ななめ折り</button>
+    </div>
+    <div class="toolbar-row">
+      <button class="ghost" id="undoFold">ひとつ戻す</button>
+      <button class="ghost" id="resetFold">最初から</button>
+    </div>
+    <button class="primary full" id="toCut" style="margin-top:12px;">はさみで切りはじめる →</button>
+  </section>
+
+  <!-- ============ CUT STAGE ============ -->
+  <section class="stage" id="stage-cut" style="display:none;">
+    <div class="canvas-wrap"><canvas id="cutCanvas"></canvas></div>
+    <p class="hint" id="cutHint">えんぴつで自由に描いてください。<br>ふちからふちへ引けば「切りはなし」、丸や四角のように輪を閉じれば「切りぬき」になります。</p>
+    <div class="meta-row">
+      <span>カット数 : <b id="cutCount">0</b></span>
+    </div>
+    <div class="toolbar-row">
+      <button class="ghost" id="undoCut">ひとつ戻す</button>
+      <button class="ghost" id="resetCut">切り直す</button>
+      <button class="warn" id="backToFold">折りに戻る</button>
+    </div>
+    <button class="primary full" id="toUnfold" style="margin-top:12px;">紙をひらく →</button>
+  </section>
+
+  <!-- ============ UNFOLD / RESULT STAGE ============ -->
+  <section class="stage" id="stage-result" style="display:none;">
+    <div class="badge gold">できあがり</div>
+    <div class="badge gold" id="resultChallengeBadge" style="display:none; margin-left:6px;">お題クリア</div>
+    <div class="canvas-wrap result-canvas-wrap"><canvas id="resultCanvas" class="fade-in"></canvas></div>
+    <p class="hint">紙をひらいた完成形です。</p>
+
+    <input type="text" id="titleInput" class="text-input" placeholder="作品のタイトル（例：ゆきの結晶）" maxlength="30">
+    <div class="btn-grid">
+      <button id="saveImg">画像を保存</button>
+      <button id="saveWork">マイ作品に保存</button>
+    </div>
+    <button class="primary full" id="publishWork" style="margin-top:8px;">🌐 みんなに公開する</button>
+    <p class="hint" id="saveStatus"></p>
+    <button class="warn full" id="makeAnother" style="margin-top:8px;">もう一度つくる</button>
+  </section>
+
+  <!-- ============ COMMUNITY ============ -->
+  <section class="stage" id="stage-community" style="display:none;">
+    <div class="tool-row">
+      <button id="sortRecent" class="active">🕒 新着</button>
+      <button id="sortRanking">🏆 いいね順</button>
+    </div>
+    <div id="communityGrid" class="gallery-grid"></div>
+    <p class="hint" id="communityEmpty" style="display:none;">まだ公開された作品がありません。</p>
+  </section>
+
+  <!-- ============ MY WORKS ============ -->
+  <section class="stage" id="stage-myworks" style="display:none;">
+    <div id="myworksGrid" class="gallery-grid"></div>
+    <p class="hint" id="myworksEmpty" style="display:none;">まだ作品がありません。「じぶんでつくる」からはじめましょう。</p>
+  </section>
+
+  <!-- ============ DETAIL ============ -->
+  <section class="stage" id="stage-detail" style="display:none;">
+    <div class="badge" id="detailBadge">作品</div>
+    <div class="canvas-wrap result-canvas-wrap"><canvas id="detailCanvas"></canvas></div>
+    <h2 id="detailTitle" class="detail-title"></h2>
+    <div class="meta-row">
+      <span id="detailLikeRow">❤️ <b id="detailLikes">0</b></span>
+      <span id="detailDate"></span>
+    </div>
+    <div class="btn-grid" id="detailActionsCommunity" style="display:none;">
+      <button class="primary full" id="likeBtn">❤️ いいねする</button>
+    </div>
+    <div class="btn-grid" id="detailActionsMine" style="display:none;">
+      <button class="full" id="publishToggle">🌐 公開する</button>
+    </div>
+    <div class="btn-grid" style="margin-top:8px;">
+      <button id="playAutoBtn">▶ 通しで再生</button>
+      <button id="stepModeBtn">⏭ コマ送りで見る</button>
+    </div>
+    <div id="stepControls" style="display:none; margin-top:8px;">
+      <p class="hint" id="stepLabel" style="margin:0 0 8px;"></p>
+      <div class="toolbar-row">
+        <button id="stepPrev">◀ 前へ</button>
+        <button id="stepNext">次へ ▶</button>
+      </div>
+    </div>
+    <div class="btn-grid" style="margin-top:8px;">
+      <button id="shareX">𝕏 でシェア</button>
+      <button id="shareNative">📤 共有 / 画像保存</button>
+    </div>
+    <p class="hint">Instagramへの直接投稿には対応していません。「共有」から画像を保存し、Instagramアプリから投稿してください。</p>
+    <button class="ghost full" id="deleteWork" style="display:none; margin-top:6px;">この作品を削除</button>
+  </section>
+
+  <footer class="note">
+    <b>試作版について ―</b> これは「折る→切る→ひらく」というコア体験と、保存・公開・共有の流れを確認するための試作です。<br>
+    「みんなの作品」は今のところこの端末内のみのデータです。広告表示は次の段階で組み込みます。
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const S = 600; // 内部座標系のサイズ（スケールなし、折りもカットも同じ固定座標系で扱う）
+
+  // ---------- 紙の色・柄 ----------
+  function drawSolid(tctx,size,bg){ tctx.fillStyle=bg; tctx.fillRect(0,0,size,size); }
+  function drawIchimatsu(tctx,size,bg,fg){
+    tctx.fillStyle=bg; tctx.fillRect(0,0,size,size);
+    const h=size/2;
+    tctx.fillStyle=fg; tctx.fillRect(0,0,h,h); tctx.fillRect(h,h,h,h);
+  }
+  function drawSeigaiha(tctx,size,bg,fg){
+    tctx.fillStyle=bg; tctx.fillRect(0,0,size,size);
+    tctx.strokeStyle=fg; tctx.lineWidth=size*0.05;
+    const r=size*0.34;
+    for(let row=0; row<=1; row++){
+      const cy = row*size;
+      for(let i=-1;i<=2;i++){
+        const cx = i*size*0.5;
+        for(let k=0;k<3;k++){
+          tctx.beginPath();
+          tctx.arc(cx, cy, r-k*size*0.1, Math.PI, 2*Math.PI);
+          tctx.stroke();
+        }
+      }
+    }
+  }
+  function drawYagasuri(tctx,size,bg,fg){
+    tctx.fillStyle=bg; tctx.fillRect(0,0,size,size);
+    tctx.strokeStyle=fg; tctx.lineWidth=size*0.18;
+    for(let i=-size;i<size*2;i+=size*0.34){
+      tctx.beginPath(); tctx.moveTo(i,0); tctx.lineTo(i+size,size); tctx.stroke();
+    }
+  }
+  function drawUroko(tctx,size,bg,fg){
+    tctx.fillStyle=bg; tctx.fillRect(0,0,size,size);
+    tctx.fillStyle=fg;
+    const w=size/2,h=size/2;
+    [[0,0],[1,0],[0,1],[1,1]].forEach(([c,r])=>{
+      const x=c*w,y=r*h;
+      tctx.beginPath();
+      if((r+c)%2===0){ tctx.moveTo(x,y); tctx.lineTo(x+w,y); tctx.lineTo(x+w/2,y+h); }
+      else { tctx.moveTo(x,y+h); tctx.lineTo(x+w,y+h); tctx.lineTo(x+w/2,y); }
+      tctx.closePath(); tctx.fill();
+    });
+  }
+  function drawMizutama(tctx,size,bg,fg){
+    tctx.fillStyle=bg; tctx.fillRect(0,0,size,size);
+    tctx.fillStyle=fg;
+    const r=size*0.16;
+    [[0,0],[size,0],[0,size],[size,size],[size/2,size/2]].forEach(([x,y])=>{
+      tctx.beginPath(); tctx.arc(x,y,r,0,Math.PI*2); tctx.fill();
+    });
+  }
+  function drawAsanoha(tctx,size,bg,fg){
+    tctx.fillStyle=bg; tctx.fillRect(0,0,size,size);
+    tctx.strokeStyle=fg; tctx.lineWidth=size*0.04;
+    const step=size/3;
+    [0,60,-60].forEach(angle=>{
+      tctx.save();
+      tctx.translate(size/2,size/2); tctx.rotate(angle*Math.PI/180); tctx.translate(-size/2,-size/2);
+      tctx.beginPath();
+      for(let i=-2;i<=4;i++){ tctx.moveTo(i*step,-size); tctx.lineTo(i*step,size*2); }
+      tctx.stroke();
+      tctx.restore();
+    });
+  }
+
+  const SOLID_COLORS = [
+    { id:"cream",  name:"生成り", hex:"#F6F0E2" },
+    { id:"white",  name:"白",     hex:"#FAFAF7" },
+    { id:"black",  name:"黒",     hex:"#2A241C" },
+    { id:"gray",   name:"灰",     hex:"#9A9488" },
+    { id:"red",    name:"赤",     hex:"#BF4B2C" },
+    { id:"orange", name:"橙",     hex:"#D97B3F" },
+    { id:"yellow", name:"黄",     hex:"#E0B23D" },
+    { id:"green",  name:"緑",     hex:"#4C7A5D" },
+    { id:"blue",   name:"青",     hex:"#2E6DA4" },
+    { id:"indigo", name:"藍",     hex:"#3E5C76" },
+    { id:"purple", name:"紫",     hex:"#5B4B8A" },
+    { id:"pink",   name:"桃",     hex:"#E8A0A8" },
+    { id:"brown",  name:"茶",     hex:"#8B5E3C" }
+  ];
+  const PATTERNS = [
+    { id:"asanoha",   name:"麻の葉", draw:drawAsanoha,   bg:"#FAFAF7", fg:"#1F3A5C" },
+    { id:"seigaiha",  name:"青海波", draw:drawSeigaiha,  bg:"#DDEAF0", fg:"#2E5C7A" },
+    { id:"ichimatsu", name:"市松",   draw:drawIchimatsu, bg:"#FAFAF7", fg:"#2A241C" },
+    { id:"yagasuri",  name:"矢絣",   draw:drawYagasuri,  bg:"#F1EAF6", fg:"#5B4B8A" },
+    { id:"uroko",     name:"鱗",     draw:drawUroko,     bg:"#EAF3EC", fg:"#4C7A5D" },
+    { id:"mizutama",  name:"水玉",   draw:drawMizutama,  bg:"#FBE7EA", fg:"#C7677A" }
+  ];
+  let frontSelection = { kind:"solid", id:"cream" }; // {kind:'solid'|'pattern', id}
+  let backColorId = "indigo";
+  const tileCache = {};
+  function getPatternTile(patternId){
+    if (tileCache[patternId]) return tileCache[patternId];
+    const p = PATTERNS.find(x=>x.id===patternId) || PATTERNS[0];
+    const size = 48;
+    const tile = document.createElement("canvas");
+    tile.width = size; tile.height = size;
+    const tctx = tile.getContext("2d");
+    p.draw(tctx, size, p.bg, p.fg);
+    tileCache[patternId] = tile;
+    return tile;
+  }
+  function resolveFill(ctx, side){
+    if (side === "back"){
+      const c = SOLID_COLORS.find(x=>x.id===backColorId) || SOLID_COLORS[0];
+      return c.hex;
+    }
+    if (frontSelection.kind === "pattern"){
+      return ctx.createPattern(getPatternTile(frontSelection.id), "repeat");
+    }
+    const c = SOLID_COLORS.find(x=>x.id===frontSelection.id) || SOLID_COLORS[0];
+    return c.hex;
+  }
+
+  // ---------- 状態 ----------
+  let workingPolygon = [{x:0,y:0},{x:S,y:0},{x:S,y:S},{x:0,y:S}];
+  let layers = [[]]; // 各層＝適用すべき反射直線のリスト [{A,B},...]（先頭から順に適用）
+  let foldHistory = [];
+  let foldLog = []; // [{A,B,keepPoint}] 保存・再生用に、成立した折りだけを順番に記録
+
+  // ---------- お題モード ----------
+  const CHALLENGES = [
+    { title:"雪の結晶", hint:"同じ折り方を3〜4回くり返してから、外側の角をいくつか切り落としてみよう。" },
+    { title:"花ふぶき", hint:"ななめ折りを2回してから、細かく切り込みを入れてみよう。" },
+    { title:"まどのレース", hint:"まっすぐ折りを2〜3回してから、内側に丸い穴をいくつか開けてみよう。" },
+    { title:"星の模様", hint:"ななめ折りを3回してから、辺を斜めに切ってみよう。" },
+    { title:"つながる輪", hint:"好きなだけ折ってから、輪になるように切ってみよう。" },
+    { title:"左右対称の紋", hint:"たて折りを1回してから、好きな形に切ってひらいてみよう。" }
+  ];
+  function dayOfYear(){
+    const now = new Date();
+    const start = new Date(now.getFullYear(),0,0);
+    return Math.floor((now - start) / 86400000);
+  }
+  function todaysChallenge(){ return CHALLENGES[dayOfYear() % CHALLENGES.length]; }
+  let activeChallenge = null;
+
+  let cuts = [];          // 切り落とされた領域（多角形）のリスト。固定座標系。
+  let cutHistory = [];    // undo用
+  let cutStagePolygon = null; // 切りフェーズ開始時点のworkingPolygon（「切り直す」用）
+
+  let appState = "fold";     // fold | cut | unfold
+  let foldSubState = "idle"; // idle | drawing | pending
+  let foldCurrentPath = null;
+  let foldPending = null;    // {A,B,pieceOptA,pieceOptB}
+  let cutSubState = "idle";  // idle | drawing | pending
+  let currentPath = null;    // 描いている途中のえんぴつパス（world座標）
+  let pending = null;        // {pieceKeepA, pieceKeepB} 端から端へつながった時の二択
+
+  // ---------- 幾何ユーティリティ ----------
+  function cross(O,P,Q){ return (P.x-O.x)*(Q.y-O.y) - (P.y-O.y)*(Q.x-O.x); }
+
+  function reflectPoint(p, A, B){
+    const dx = B.x-A.x, dy = B.y-A.y;
+    const len2 = dx*dx + dy*dy;
+    if (len2 === 0) return {x:p.x, y:p.y};
+    const t = ((p.x-A.x)*dx + (p.y-A.y)*dy)/len2;
+    const projx = A.x + t*dx, projy = A.y + t*dy;
+    return {x: 2*projx - p.x, y: 2*projy - p.y};
+  }
+  function applyReflList(p, list){
+    let cur = p;
+    for (const line of list){ cur = reflectPoint(cur, line.A, line.B); }
+    return cur;
+  }
+  function bboxOf(poly){
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for (const p of poly){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }
+    return {minX,minY,maxX,maxY};
+  }
+  function clipHalfPlane(poly, A, B, keepPoint){
+    const keepSign = Math.sign(cross(A,B,keepPoint)) || 1;
+    const out = [];
+    const n = poly.length;
+    for (let i=0;i<n;i++){
+      const cur = poly[i], nxt = poly[(i+1)%n];
+      const curSide = cross(A,B,cur) * keepSign;
+      const nxtSide = cross(A,B,nxt) * keepSign;
+      const curIn = curSide >= -1e-6;
+      const nxtIn = nxtSide >= -1e-6;
+      if (curIn) out.push(cur);
+      if (curIn !== nxtIn){
+        const s1 = cross(A,B,cur), s2 = cross(A,B,nxt);
+        const t = s1/(s1-s2);
+        out.push({ x: cur.x + (nxt.x-cur.x)*t, y: cur.y + (nxt.y-cur.y)*t });
+      }
+    }
+    return dedupePolygon(out);
+  }
+  // 連続する頂点がほぼ同じ位置なら間引く（繰り返し折る/切ることで生まれる長さ0の辺を防ぐ）
+  function dedupePolygon(poly){
+    if (poly.length < 2) return poly;
+    const eps = S*1e-4;
+    const out = [];
+    for (const p of poly){
+      const last = out[out.length-1];
+      if (!last || Math.hypot(p.x-last.x, p.y-last.y) > eps) out.push(p);
+    }
+    if (out.length>1 && Math.hypot(out[0].x-out[out.length-1].x, out[0].y-out[out.length-1].y) <= eps) out.pop();
+    return out;
+  }
+  function polygonArea(poly){
+    let a=0;
+    for(let i=0;i<poly.length;i++){ const p=poly[i], q=poly[(i+1)%poly.length]; a += p.x*q.y - q.x*p.y; }
+    return Math.abs(a)/2;
+  }
+  function pointInPolygon(pt, poly){
+    let inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
+      const hit = ((yi>pt.y)!==(yj>pt.y)) && (pt.x < (xj-xi)*(pt.y-yi)/(yj-yi)+xi);
+      if (hit) inside = !inside;
+    }
+    return inside;
+  }
+  function nearestPointOnSegment(p,a,b){
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const len2=dx*dx+dy*dy;
+    if(len2===0) return {point:{x:a.x,y:a.y}, t:0};
+    let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/len2;
+    t=Math.max(0,Math.min(1,t));
+    return {point:{x:a.x+t*dx, y:a.y+t*dy}, t};
+  }
+  function nearestPointOnPolygon(pt, poly){
+    let best=null, bestDist=Infinity, bestEdge=0, bestT=0;
+    const n=poly.length;
+    for(let i=0;i<n;i++){
+      const a=poly[i], b=poly[(i+1)%n];
+      const r = nearestPointOnSegment(pt,a,b);
+      const dx=r.point.x-pt.x, dy=r.point.y-pt.y, d=dx*dx+dy*dy;
+      if(d<bestDist){bestDist=d; best=r.point; bestEdge=i; bestT=r.t;}
+    }
+    return {point:best, edge:bestEdge, t:bestT, dist:Math.sqrt(bestDist)};
+  }
+  // 多角形 poly と、任意の凸多角形 clipPoly との「重なり部分」を求める
+  // （clipPolyの重心を各辺の内側判定に使うので、凸多角形どうしなら常に正しく交差する。
+  //   subject側 poly は非凸でも良い＝Sutherland-Hodgmanの性質）
+  function clipByConvexPolygon(poly, clipPoly){
+    const cx = clipPoly.reduce((s,p)=>s+p.x,0)/clipPoly.length;
+    const cy = clipPoly.reduce((s,p)=>s+p.y,0)/clipPoly.length;
+    const centroid = {x:cx,y:cy};
+    let result = poly;
+    for (let i=0;i<clipPoly.length && result.length>=3;i++){
+      const A = clipPoly[i], B = clipPoly[(i+1)%clipPoly.length];
+      result = clipHalfPlane(result, A, B, centroid);
+    }
+    return result;
+  }
+
+  // 凸多角形 poly を、境界上の2点(path[0]とpath[末尾])を結ぶ「えんぴつの軌跡」で二分割する
+  function splitPolygonByPath(poly, path, edgeA, edgeB, tA, tB){
+    const n = poly.length;
+    function collectArc(fromEdge, toEdge){
+      const verts = [];
+      let k = (fromEdge+1) % n;
+      let guard = 0;
+      while (guard++ <= n){
+        verts.push(poly[k]);
+        if (k === toEdge) break;
+        k = (k+1) % n;
+      }
+      return verts;
+    }
+    const A = path[0], B = path[path.length-1];
+    let arcAtoB, arcBtoA;
+    if (edgeA === edgeB){
+      // 同じ辺の上に2点。辺に沿った並び順(t)で「間に頂点なし」の短い側と、ぐるっと回る長い側に分ける
+      if (tA <= tB){ arcAtoB = []; arcBtoA = collectArc(edgeB, edgeA); }
+      else { arcAtoB = collectArc(edgeA, edgeB); arcBtoA = []; }
+    } else {
+      arcAtoB = collectArc(edgeA, edgeB);   // poly[edgeA+1 .. edgeB]
+      arcBtoA = collectArc(edgeB, edgeA);   // poly[edgeB+1 .. edgeA]
+    }
+    const pathBackward = path.slice().reverse();
+
+    const piece1 = [...path, ...arcBtoA];                       // A→…→B（描いた通り）→ 元の辺を逆側から戻ってA
+    const piece2 = [A, ...arcAtoB, ...pathBackward.slice(0,-1)]; // A → 元の辺 → B → 描いた通りを逆走してA
+    return [piece1, piece2];
+  }
+
+  // 2線分の交点（両方とも区間内で交わる場合のみ）
+  function segSegIntersect(p1,p2,p3,p4){
+    const d1x=p2.x-p1.x, d1y=p2.y-p1.y;
+    const d2x=p4.x-p3.x, d2y=p4.y-p3.y;
+    const denom = d1x*d2y - d1y*d2x;
+    if (Math.abs(denom) < 1e-9) return null;
+    const t = ((p3.x-p1.x)*d2y - (p3.y-p1.y)*d2x) / denom;
+    const u = ((p3.x-p1.x)*d1y - (p3.y-p1.y)*d1x) / denom;
+    if (t<-1e-7||t>1+1e-7||u<-1e-7||u>1+1e-7) return null;
+    return {x: p1.x+t*d1x, y: p1.y+t*d1y};
+  }
+  // 描いたパスが多角形の輪郭を横切る点を、パスの順番に沿ってすべて集める
+  function collectCrossingEvents(path, poly){
+    const n = poly.length;
+    const events = [];
+    for (let i=0;i<path.length-1;i++){
+      const p1=path[i], p2=path[i+1];
+      for (let e=0;e<n;e++){
+        const a=poly[e], b=poly[(e+1)%n];
+        const hit = segSegIntersect(p1,p2,a,b);
+        if (hit) events.push({segIdx:i, point:hit, edge:e});
+      }
+    }
+    return events;
+  }
+  function edgeParam(poly, edgeIdx, point){
+    const a=poly[edgeIdx], b=poly[(edgeIdx+1)%poly.length];
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const len2=dx*dx+dy*dy;
+    if (len2===0) return 0;
+    return ((point.x-a.x)*dx+(point.y-a.y)*dy)/len2;
+  }
+  // 描いたパスが紙のふちをどこで横切ったかを見つけ、外→外／辺→外／外→辺／辺→辺いずれでも
+  // 「紙を貫通した区間」だけを切り出す。見つからなければ null。
+  function computeCutSpan(path, poly){
+    const bb = bboxOf(poly);
+    const diag = Math.hypot(bb.maxX-bb.minX, bb.maxY-bb.minY);
+    const fallbackThreshold = diag*0.16;
+    const events = collectCrossingEvents(path, poly);
+
+    let entry=null, exit=null;
+    if (events.length >= 2){
+      entry = events[0]; exit = events[events.length-1];
+    } else if (events.length === 1){
+      const ev = events[0];
+      const nearStart = ev.segIdx <= (path.length-2)/2;
+      if (nearStart){
+        entry = ev;
+        const snap = nearestPointOnPolygon(path[path.length-1], poly);
+        if (snap.dist < fallbackThreshold) exit = {segIdx: path.length-2, point: snap.point, edge: snap.edge, isFallbackEnd:true};
+      } else {
+        exit = ev;
+        const snap = nearestPointOnPolygon(path[0], poly);
+        if (snap.dist < fallbackThreshold) entry = {segIdx: -1, point: snap.point, edge: snap.edge, isFallbackStart:true};
+      }
+    } else {
+      const snapS = nearestPointOnPolygon(path[0], poly);
+      const snapE = nearestPointOnPolygon(path[path.length-1], poly);
+      if (snapS.dist < fallbackThreshold && snapE.dist < fallbackThreshold){
+        entry = {segIdx:-1, point:snapS.point, edge:snapS.edge, isFallbackStart:true};
+        exit = {segIdx: path.length-2, point:snapE.point, edge:snapE.edge, isFallbackEnd:true};
+      }
+    }
+    if (!entry || !exit) return null;
+    if (Math.hypot(entry.point.x-exit.point.x, entry.point.y-exit.point.y) < diag*0.04) return null;
+
+    const middle = path.slice(entry.segIdx+1, exit.segIdx+1);
+    const finalPath = [entry.point, ...middle, exit.point];
+    const tA = edgeParam(poly, entry.edge, entry.point);
+    const tB = edgeParam(poly, exit.edge, exit.point);
+    return {path: finalPath, edgeA: entry.edge, edgeB: exit.edge, tA, tB};
+  }
+
+  // ---------- 折りの実行 ----------
+  function isRectangleLike(poly){
+    if (poly.length !== 4) return false;
+    for (let i=0;i<4;i++){
+      const a=poly[i], b=poly[(i+1)%4];
+      if (Math.abs(a.x-b.x) > S*1e-3 && Math.abs(a.y-b.y) > S*1e-3) return false;
+    }
+    return true;
+  }
+  function computeFoldLine(type, poly){
+    const bb = bboxOf(poly);
+    let A,B,keepPoint;
+    if (type === "V"){
+      const cx=(bb.minX+bb.maxX)/2; A={x:cx,y:bb.minY-50}; B={x:cx,y:bb.maxY+50};
+      keepPoint = {x:bb.minX, y:bb.minY};
+    } else if (type === "H"){
+      const cy=(bb.minY+bb.maxY)/2; A={x:bb.minX-50,y:cy}; B={x:bb.maxX+50,y:cy};
+      keepPoint = {x:bb.minX, y:bb.minY};
+    } else if (isRectangleLike(poly)){
+      // 最初のななめ折り：1(左上)と4(右下)が重なるように、2-3の対角線で折る
+      A={x:bb.maxX,y:bb.minY}; B={x:bb.minX,y:bb.maxY};
+      keepPoint = {x:bb.minX, y:bb.minY};
+    } else {
+      // 2回目以降のななめ折り：三角形になった紙を、一番長い辺(底辺)の中点と、
+      // その向かいの頂点(頂角)を結ぶ線で折る → 底辺の両端の角どうしが重なる
+      const n = poly.length;
+      let bestLen=-1, bestI=0;
+      for (let i=0;i<n;i++){
+        const a=poly[i], b=poly[(i+1)%n];
+        const len = Math.hypot(b.x-a.x, b.y-a.y);
+        if (len > bestLen){ bestLen=len; bestI=i; }
+      }
+      const baseA = poly[bestI], baseB = poly[(bestI+1)%n];
+      const mid = {x:(baseA.x+baseB.x)/2, y:(baseA.y+baseB.y)/2};
+      let apex=null, bestDist=-1;
+      for (let i=0;i<n;i++){
+        if (i===bestI || i===(bestI+1)%n) continue;
+        const d = Math.abs(cross(baseA,baseB,poly[i]));
+        if (d > bestDist){ bestDist=d; apex=poly[i]; }
+      }
+      if (!apex) apex = {x:(bb.minX+bb.maxX)/2, y:(bb.minY+bb.maxY)/2};
+      A = apex; B = mid;
+      // 底辺の2端点のうち、より「左上」寄りの方を残す側の基準にする（一貫性のため）
+      keepPoint = (baseA.y < baseB.y - 1e-6) ? baseA
+        : (baseB.y < baseA.y - 1e-6 ? baseB : (baseA.x <= baseB.x ? baseA : baseB));
+    }
+    return {A,B,keepPoint};
+  }
+  let foldAnimating = false;
+  let lastFoldGhost = null; // {poly} 直前の折りで、裏返って重なった部分の見た目確認用
+  function doFold(type){
+    if (appState !== "fold" || foldAnimating || foldSubState !== "idle") return;
+    const {A,B,keepPoint} = computeFoldLine(type, workingPolygon);
+    const keptPiece = clipHalfPlane(workingPolygon, A, B, keepPoint);
+    const oppKeepPoint = reflectPoint(keepPoint, A, B);
+    const flapPiece = clipHalfPlane(workingPolygon, A, B, oppKeepPoint);
+    if (keptPiece.length < 3 || flapPiece.length < 3) return;
+    applyFold(A, B, keptPiece, flapPiece, type);
+  }
+  function applyFold(A, B, keptPiece, flapPiece, foldType){
+    const oldPolygon = workingPolygon.map(p=>({...p}));
+    const oldLayers = layers;
+    foldHistory.push({
+      polygon: oldPolygon,
+      layers: oldLayers.map(l=>l.map(ln=>({A:{...ln.A},B:{...ln.B}})))
+    });
+    const newLayers = [];
+    for (const reflList of oldLayers){
+      newLayers.push(reflList);
+      newLayers.push([{A,B}, ...reflList]);
+    }
+    workingPolygon = keptPiece;
+    layers = newLayers;
+    const keepRef = keptPiece.reduce((acc,p)=>({x:acc.x+p.x/keptPiece.length, y:acc.y+p.y/keptPiece.length}), {x:0,y:0});
+    foldLog.push({A:{...A}, B:{...B}, keepPoint:keepRef, foldType: foldType || "free"});
+    updateFoldUI();
+    animateFold(oldPolygon, keptPiece, flapPiece, A, B);
+  }
+
+
+
+  function animateFold(oldPolygon, keptPiece, flapPiece, A, B){
+    foldAnimating = true;
+    setFoldControlsEnabled(false);
+
+    const canvas = document.getElementById("foldCanvas");
+    const vt = getViewTransform(canvas.getBoundingClientRect().width, oldPolygon); // 折る前の大きさを基準にした固定ビュー
+    const dx=B.x-A.x, dy=B.y-A.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const dirUnit = {x:dx/len, y:dy/len};
+    const normalUnit = {x:-dirUnit.y, y:dirUnit.x};
+
+    const duration = 480;
+    const start = performance.now();
+
+    function frame(now){
+      const raw = Math.min(1, (now-start)/duration);
+      const t = easeInOutQuad(raw);
+      const s = 1 - 2*t; // 1 → 0(真横向き) → -1(折り重なる)
+
+      const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+      ctx.clearRect(0,0,cssSize,cssSize);
+
+      // 折り線をうっすらガイド表示
+      const Ascr = toScreen(A, vt), Bscr = toScreen(B, vt);
+      ctx.save();
+      ctx.strokeStyle = "rgba(191,75,44,.55)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(Ascr.x,Ascr.y); ctx.lineTo(Bscr.x,Bscr.y); ctx.stroke();
+      ctx.restore();
+
+      // 残る側（動かない・常に表）
+      drawPaperPolygon(ctx, keptPiece.map(p=>toScreen(p,vt)), "front", 1);
+
+      // 折られる側（クレースを軸に反転していく。裏返る瞬間に色が変わる）
+      const animatedFlap = flapPiece.map(p=>{
+        const {along, perp} = decompose(p, A, dirUnit, normalUnit);
+        return recompose(along, perp*s, A, dirUnit, normalUnit);
+      });
+      const flapColor = s >= 0 ? "front" : "back";
+      const flapAlpha = 0.7 + 0.3*Math.abs(s);
+      drawPaperPolygon(ctx, animatedFlap.map(p=>toScreen(p,vt)), flapColor, flapAlpha);
+
+      if (raw < 1){
+        requestAnimationFrame(frame);
+      } else {
+        foldAnimating = false;
+        setFoldControlsEnabled(true);
+        lastFoldGhost = { poly: flapPiece.map(p=>reflectPoint(p,A,B)) };
+        renderFoldStage();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  function undoFold(){
+    if (!foldHistory.length || foldAnimating) return;
+    const prev = foldHistory.pop();
+    workingPolygon = prev.polygon; layers = prev.layers;
+    lastFoldGhost = null;
+    foldLog.pop();
+    updateFoldUI(); renderFoldStage();
+  }
+  function resetFold(){
+    if (foldAnimating) return;
+    workingPolygon = [{x:0,y:0},{x:S,y:0},{x:S,y:S},{x:0,y:S}];
+    layers = [[]]; foldHistory = []; cuts = []; cutHistory = [];
+    lastFoldGhost = null;
+    foldLog = [];
+    updateFoldUI(); renderFoldStage();
+  }
+  function updateFoldUI(){
+    document.getElementById("foldCount").textContent = foldHistory.length;
+    document.getElementById("layerCount").textContent = layers.length;
+    document.getElementById("undoFold").disabled = foldHistory.length === 0;
+  }
+  function setFoldControlsEnabled(enabled){
+    ["foldV","foldH","foldD","undoFold","resetFold","toCut"].forEach(id=>{
+      document.getElementById(id).disabled = !enabled || (id==="undoFold" && foldHistory.length===0);
+    });
+  }
+  function decompose(p, A, dirUnit, normalUnit){
+    const vx=p.x-A.x, vy=p.y-A.y;
+    return { along: vx*dirUnit.x+vy*dirUnit.y, perp: vx*normalUnit.x+vy*normalUnit.y };
+  }
+  function recompose(along, perp, A, dirUnit, normalUnit){
+    return { x: A.x + along*dirUnit.x + perp*normalUnit.x, y: A.y + along*dirUnit.y + perp*normalUnit.y };
+  }
+  function easeInOutQuad(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+
+  // ---------- 表示ビュー変換 ----------
+  function getViewTransform(canvasSize, poly){
+    const bb = bboxOf(poly);
+    const w = Math.max(bb.maxX-bb.minX, 1), h = Math.max(bb.maxY-bb.minY, 1);
+    const pad = canvasSize*0.1;
+    const scale = Math.min((canvasSize-pad*2)/w, (canvasSize-pad*2)/h);
+    const offsetX = (canvasSize - w*scale)/2 - bb.minX*scale;
+    const offsetY = (canvasSize - h*scale)/2 - bb.minY*scale;
+    return {scale, offsetX, offsetY};
+  }
+  function toScreen(p, vt){ return {x: p.x*vt.scale + vt.offsetX, y: p.y*vt.scale + vt.offsetY}; }
+  function toWorld(p, vt){ return {x: (p.x - vt.offsetX)/vt.scale, y: (p.y - vt.offsetY)/vt.scale}; }
+  function setupCanvasHiDPI(canvas){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width*dpr; canvas.height = rect.height*dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx, cssSize: rect.width};
+  }
+  function drawPolygonPath(ctx, screenPoly){
+    ctx.beginPath();
+    screenPoly.forEach((p,i)=> i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+    ctx.closePath();
+  }
+  function drawPaperPolygon(ctx, screenPoly, side, alpha){
+    side = side || "front";
+    alpha = alpha==null ? 1 : alpha;
+    const fillStyle = resolveFill(ctx, side);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawPolygonPath(ctx, screenPoly);
+    ctx.fillStyle = fillStyle;
+    ctx.shadowColor = "rgba(40,30,15,.25)";
+    ctx.shadowBlur = 14;
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawPolygonPath(ctx, screenPoly);
+    ctx.strokeStyle = "rgba(34,31,27,.35)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---------- 折りステージ描画 ----------
+  let foldVT = null;
+  function renderFoldStage(){
+    const canvas = document.getElementById("foldCanvas");
+    const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+    ctx.clearRect(0,0,cssSize,cssSize);
+    const viewPolys = lastFoldGhost ? [...workingPolygon, ...lastFoldGhost.poly] : workingPolygon;
+    foldVT = getViewTransform(cssSize, viewPolys);
+    drawPaperPolygon(ctx, workingPolygon.map(p=>toScreen(p,foldVT)), "front", 1);
+    if (lastFoldGhost){
+      drawPaperPolygon(ctx, lastFoldGhost.poly.map(p=>toScreen(p,foldVT)), "back", 0.55);
+    }
+
+    if (foldSubState === "drawing" && foldCurrentPath && foldCurrentPath.length > 1){
+      ctx.save();
+      ctx.strokeStyle = "#BF4B2C";
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
+      const pts = foldCurrentPath.map(p=>toScreen(p,foldVT));
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+      ctx.restore();
+      drawDot(ctx, pts[0], "#22406B");
+    }
+
+    if (foldSubState === "pending" && foldPending){
+      const optA = foldPending.pieceOptA.map(p=>toScreen(p,foldVT));
+      const optB = foldPending.pieceOptB.map(p=>toScreen(p,foldVT));
+      ctx.save();
+      drawPolygonPath(ctx, optA);
+      ctx.fillStyle = "rgba(34,64,107,.20)";
+      ctx.fill();
+      ctx.strokeStyle = "#22406B"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+      ctx.save();
+      drawPolygonPath(ctx, optB);
+      ctx.fillStyle = "rgba(191,75,44,.20)";
+      ctx.fill();
+      ctx.strokeStyle = "#BF4B2C"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+      const A = toScreen(foldPending.A, foldVT), B = toScreen(foldPending.B, foldVT);
+      ctx.save();
+      ctx.strokeStyle = "#221F1B"; ctx.lineWidth = 2.5;
+      ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke();
+      ctx.restore();
+    }
+    updateFoldHint();
+  }
+  function updateFoldHint(){
+    const el = document.getElementById("foldHint");
+    if (foldSubState === "pending"){
+      el.innerHTML = "青とオレンジ、<b>残す方をタップ</b>してください。";
+      el.classList.add("emph");
+    } else {
+      el.innerHTML = "ボタンでサッと折るか、紙の上を指でなぞって好きな位置で折ることもできます。";
+      el.classList.remove("emph");
+    }
+  }
+  function attachFoldPointerHandlers(){
+    const canvas = document.getElementById("foldCanvas");
+    const MIN_STEP = S * 0.007;
+    function getWorldPos(evt){
+      const rect = canvas.getBoundingClientRect();
+      const screenP = {x: evt.clientX-rect.left, y: evt.clientY-rect.top};
+      return toWorld(screenP, foldVT);
+    }
+    canvas.addEventListener("pointerdown", (e)=>{
+      if (appState !== "fold" || foldAnimating) return;
+      canvas.setPointerCapture(e.pointerId);
+      const worldP = getWorldPos(e);
+
+      if (foldSubState === "pending"){
+        if (pointInPolygon(worldP, foldPending.pieceOptA)){
+          applyFold(foldPending.A, foldPending.B, foldPending.pieceOptA, foldPending.pieceOptB);
+          foldSubState = "idle"; foldPending = null;
+          return;
+        } else if (pointInPolygon(worldP, foldPending.pieceOptB)){
+          applyFold(foldPending.A, foldPending.B, foldPending.pieceOptB, foldPending.pieceOptA);
+          foldSubState = "idle"; foldPending = null;
+          return;
+        }
+        foldSubState = "idle"; foldPending = null;
+        setFoldControlsEnabled(true);
+        renderFoldStage();
+        return;
+      }
+      if (foldSubState === "idle"){
+        foldCurrentPath = [worldP];
+        foldSubState = "drawing";
+        setFoldControlsEnabled(false);
+        renderFoldStage();
+      }
+    });
+    canvas.addEventListener("pointermove", (e)=>{
+      if (appState !== "fold" || foldSubState !== "drawing" || !foldCurrentPath) return;
+      const worldP = getWorldPos(e);
+      const last = foldCurrentPath[foldCurrentPath.length-1];
+      if (Math.hypot(worldP.x-last.x, worldP.y-last.y) >= MIN_STEP){
+        foldCurrentPath.push(worldP);
+        renderFoldStage();
+      }
+    });
+    function finishFoldDrawing(){
+      if (appState !== "fold" || foldSubState !== "drawing" || !foldCurrentPath) return;
+      const path = foldCurrentPath;
+      foldCurrentPath = null;
+
+      if (path.length < 2){ foldSubState="idle"; setFoldControlsEnabled(true); renderFoldStage(); return; }
+
+      const span = computeCutSpan(path, workingPolygon);
+      if (span){
+        const A = span.path[0], B = span.path[span.path.length-1]; // 折り線は必ず直線
+        const ref = findSideRefPoint(workingPolygon, A, B);
+        const pieceOptA = clipHalfPlane(workingPolygon, A, B, ref);
+        const pieceOptB = clipHalfPlane(workingPolygon, A, B, reflectPoint(ref, A, B));
+        if (pieceOptA.length >= 3 && pieceOptB.length >= 3){
+          foldPending = {A,B,pieceOptA,pieceOptB};
+          foldSubState = "pending";
+          renderFoldStage();
+          return;
+        }
+      }
+      foldSubState = "idle";
+      setFoldControlsEnabled(true);
+      renderFoldStage();
+    }
+    canvas.addEventListener("pointerup", finishFoldDrawing);
+    canvas.addEventListener("pointercancel", ()=>{
+      if (foldSubState === "drawing"){ foldSubState="idle"; foldCurrentPath=null; setFoldControlsEnabled(true); renderFoldStage(); }
+    });
+  }
+  function findSideRefPoint(poly, A, B){
+    for (const v of poly){ if (Math.abs(cross(A,B,v)) > S*1e-4) return v; }
+    return {x:(A.x+B.x)/2+1, y:(A.y+B.y)/2};
+  }
+
+  // ---------- 切りステージ ----------
+  let cutVT = null;
+
+  function renderCutStage(){
+    const canvas = document.getElementById("cutCanvas");
+    const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+    ctx.clearRect(0,0,cssSize,cssSize);
+    cutVT = getViewTransform(cssSize, workingPolygon);
+    const screenPoly = workingPolygon.map(p=>toScreen(p,cutVT));
+    drawPaperPolygon(ctx, screenPoly);
+
+    // これまでに切り取った穴・切り欠きを反映（見た目だけ。データは cuts 配列が正）
+    if (cuts.length){
+      ctx.save();
+      drawPolygonPath(ctx, screenPoly);
+      ctx.clip();
+      ctx.globalCompositeOperation = "destination-out";
+      for (const region of cuts){
+        if (region.length < 3) continue;
+        drawPolygonPath(ctx, region.map(p=>toScreen(p,cutVT)));
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = "rgba(34,31,27,.3)";
+      ctx.lineWidth = 1;
+      for (const region of cuts){
+        if (region.length < 3) continue;
+        drawPolygonPath(ctx, region.map(p=>toScreen(p,cutVT)));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (cutSubState === "drawing" && currentPath && currentPath.length > 1){
+      ctx.save();
+      ctx.strokeStyle = "#BF4B2C";
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
+      const pts = currentPath.map(p=>toScreen(p,cutVT));
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+      ctx.restore();
+      drawDot(ctx, pts[0], "#22406B");
+    }
+
+    if (cutSubState === "pending" && pending){
+      const pieceA = pending.pieceKeepA.map(p=>toScreen(p,cutVT));
+      const pieceB = pending.pieceKeepB.map(p=>toScreen(p,cutVT));
+      ctx.save();
+      drawPolygonPath(ctx, pieceA);
+      ctx.fillStyle = "rgba(34,64,107,.20)";
+      ctx.fill();
+      ctx.strokeStyle = "#22406B"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+      ctx.save();
+      drawPolygonPath(ctx, pieceB);
+      ctx.fillStyle = "rgba(191,75,44,.20)";
+      ctx.fill();
+      ctx.strokeStyle = "#BF4B2C"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+      // 切った軌跡を強調
+      const pathPts = pending.path.map(p=>toScreen(p,cutVT));
+      ctx.save();
+      ctx.strokeStyle = "#221F1B"; ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(pathPts[0].x, pathPts[0].y);
+      for (let i=1;i<pathPts.length;i++) ctx.lineTo(pathPts[i].x, pathPts[i].y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    document.getElementById("cutCount").textContent = cuts.length;
+    document.getElementById("undoCut").disabled = cutHistory.length === 0;
+    updateCutHint();
+  }
+
+  function drawDot(ctx, p, color){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.restore();
+  }
+
+  function updateCutHint(){
+    const el = document.getElementById("cutHint");
+    if (cutSubState === "pending"){
+      el.innerHTML = "青とオレンジ、<b>切り落とす方をタップ</b>してください。";
+      el.classList.add("emph");
+    } else {
+      el.innerHTML = "えんぴつで自由に描いてください。<br>ふちからふちへ引けば「切りはなし」、丸や四角のように輪を閉じれば「切りぬき」になります。";
+      el.classList.remove("emph");
+    }
+  }
+
+  function attachCutPointerHandlers(){
+    const canvas = document.getElementById("cutCanvas");
+    const MIN_STEP = S * 0.007; // これ以上動いたら点を追加（手ブレの微振動を間引く）
+
+    function getWorldPos(evt){
+      const rect = canvas.getBoundingClientRect();
+      const screenP = {x: evt.clientX-rect.left, y: evt.clientY-rect.top};
+      return toWorld(screenP, cutVT);
+    }
+
+    canvas.addEventListener("pointerdown", (e)=>{
+      if (appState !== "cut") return;
+      canvas.setPointerCapture(e.pointerId);
+      const worldP = getWorldPos(e);
+
+      if (cutSubState === "pending"){
+        if (pointInPolygon(worldP, pending.pieceKeepA)){
+          commitCut(pending.pieceKeepB, pending.pieceKeepA);
+        } else if (pointInPolygon(worldP, pending.pieceKeepB)){
+          commitCut(pending.pieceKeepA, pending.pieceKeepB);
+        }
+        cutSubState = "idle"; pending = null;
+        renderCutStage();
+        return;
+      }
+
+      if (cutSubState === "idle"){
+        currentPath = [worldP];
+        cutSubState = "drawing";
+        renderCutStage();
+      }
+    });
+
+    canvas.addEventListener("pointermove", (e)=>{
+      if (appState !== "cut" || cutSubState !== "drawing" || !currentPath) return;
+      const worldP = getWorldPos(e);
+      const last = currentPath[currentPath.length-1];
+      if (Math.hypot(worldP.x-last.x, worldP.y-last.y) >= MIN_STEP){
+        currentPath.push(worldP);
+        renderCutStage();
+      }
+    });
+
+    function finishDrawing(){
+      if (appState !== "cut" || cutSubState !== "drawing" || !currentPath) return;
+      const path = currentPath;
+      currentPath = null;
+
+      if (path.length < 3){ cutSubState="idle"; renderCutStage(); return; }
+
+      const bb = bboxOf(workingPolygon);
+      const diag = Math.hypot(bb.maxX-bb.minX, bb.maxY-bb.minY);
+      const pbb = bboxOf(path);
+      const pathDiag = Math.hypot(pbb.maxX-pbb.minX, pbb.maxY-pbb.minY);
+      const endpointGap = Math.hypot(path[0].x-path[path.length-1].x, path[0].y-path[path.length-1].y);
+
+      // ① 輪が閉じているか（丸・四角などの「切りぬき」）
+      const looksClosed = pathDiag > diag*0.03 && endpointGap < Math.max(pathDiag*0.35, diag*0.035);
+      if (looksClosed){
+        const overlap = clipByConvexPolygon(path, workingPolygon);
+        cutSubState = "idle";
+        if (overlap.length >= 3 && polygonArea(overlap) > (S*S)*0.0004){
+          commitCut(overlap, workingPolygon);
+        }
+        renderCutStage();
+        return;
+      }
+
+      // ② 紙のふちを実際に横切っているか（外から外、辺から外なども含めて判定）
+      const span = computeCutSpan(path, workingPolygon);
+      if (span){
+        const [pieceKeepA, pieceKeepB] = splitPolygonByPath(
+          workingPolygon, span.path, span.edgeA, span.edgeB, span.tA, span.tB
+        );
+        if (pieceKeepA.length >= 3 && pieceKeepB.length >= 3){
+          pending = {pieceKeepA, pieceKeepB, path: span.path};
+          cutSubState = "pending";
+          renderCutStage();
+          return;
+        }
+      }
+
+      // どちらの条件にも合わなかった場合は、その一筆はキャンセル
+      cutSubState = "idle";
+      renderCutStage();
+    }
+    canvas.addEventListener("pointerup", finishDrawing);
+    canvas.addEventListener("pointercancel", ()=>{
+      if (cutSubState === "drawing"){ cutSubState="idle"; currentPath=null; renderCutStage(); }
+    });
+  }
+
+  function commitCut(removedPiece, keptPiece){
+    cutHistory.push({
+      polygon: workingPolygon.map(p=>({...p})),
+      cuts: cuts.map(r=>r.map(p=>({...p})))
+    });
+    cuts.push(removedPiece);
+    workingPolygon = keptPiece;
+  }
+  function undoCut(){
+    if (!cutHistory.length) return;
+    const prev = cutHistory.pop();
+    workingPolygon = prev.polygon; cuts = prev.cuts;
+    cutSubState="idle"; pending=null; currentPath=null;
+    renderCutStage();
+  }
+  function resetCutStage(){
+    workingPolygon = cutStagePolygon.map(p=>({...p}));
+    cuts = []; cutHistory = [];
+    cutSubState="idle"; pending=null; currentPath=null;
+    renderCutStage();
+  }
+
+  // ---------- ひらくステージ ----------
+  function renderResultStage(){
+    const canvas = document.getElementById("resultCanvas");
+    const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+    ctx.clearRect(0,0,cssSize,cssSize);
+    const scale = cssSize / S;
+
+    // オフスクリーンで「紙 ＋ 全カットの穴」だけを合成する（枠線や軌跡は描かない）
+    // ひらき切った状態は常に表（クリーム色）一色 — 展開すれば裏返りは元に戻るため
+    const off = document.createElement("canvas");
+    off.width = cssSize; off.height = cssSize;
+    const offCtx = off.getContext("2d");
+    offCtx.fillStyle = resolveFill(offCtx, "front");
+    offCtx.fillRect(0,0,cssSize,cssSize);
+    offCtx.globalCompositeOperation = "destination-out";
+    for (const region of cuts){
+      if (region.length < 3) continue;
+      for (const reflList of layers){
+        const pts = region.map(p=>{
+          const w = applyReflList(p, reflList);
+          return {x:w.x*scale, y:w.y*scale};
+        });
+        offCtx.beginPath();
+        pts.forEach((p,i)=> i===0 ? offCtx.moveTo(p.x,p.y) : offCtx.lineTo(p.x,p.y));
+        offCtx.closePath();
+        offCtx.fill();
+      }
+    }
+
+    // 残った紙の形だけを、影をつけて一枚絵として重ねる（元の四角の枠は出さない）
+    ctx.save();
+    ctx.shadowColor = "rgba(35,28,15,.4)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 3;
+    ctx.drawImage(off, 0, 0, cssSize, cssSize);
+    ctx.restore();
+  }
+
+  // ---------- 保存データ（この端末内のlocalStorage） ----------
+  const LS_MYWORKS = "kirie_myworks_v1";
+  const LS_COMMUNITY = "kirie_community_v1";
+  function loadList(key){
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; }
+    catch(e){ return []; }
+  }
+  function saveList(key, list){
+    try { localStorage.setItem(key, JSON.stringify(list)); } catch(e){ /* 容量超過などは無視 */ }
+  }
+  function makeId(){ return "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,8); }
+
+  // ---------- 画面遷移 ----------
+  const SCREEN_IDS = ["home","challenge","paper","fold","cut","result","community","myworks","detail"];
+  let currentScreen = "home";
+  let detailContext = null; // {source:'community'|'myworks', id}
+
+  function setStep(step){
+    document.querySelectorAll(".step").forEach(el=> el.classList.toggle("active", el.dataset.step===step));
+  }
+  function showScreen(name){
+    currentScreen = name;
+    SCREEN_IDS.forEach(s=>{ document.getElementById("stage-"+s).style.display = (s===name?"":"none"); });
+    document.getElementById("stepsBar").style.display = ["fold","cut","result"].includes(name) ? "" : "none";
+    document.getElementById("backBar").style.display = (name==="home") ? "none" : "";
+  }
+  function goHome(){ activeChallenge = null; showScreen("home"); }
+  function openPaperPicker(){
+    renderPaperPicker();
+    showScreen("paper");
+  }
+  function goFold(){
+    appState = "fold";
+    foldSubState = "idle"; foldCurrentPath = null; foldPending = null;
+    showScreen("fold");
+    setStep("fold"); updateFoldUI();
+    setFoldControlsEnabled(true);
+    const banner = document.getElementById("challengeBanner");
+    if (activeChallenge){
+      banner.style.display = "";
+      banner.innerHTML = `<div><b>お題：${escapeHtml(activeChallenge.title)}</b></div>`;
+    } else {
+      banner.style.display = "none";
+    }
+    requestAnimationFrame(renderFoldStage);
+  }
+  function goCut(){
+    appState = "cut";
+    cutStagePolygon = workingPolygon.map(p=>({...p}));
+    cutSubState = "idle"; pending = null; currentPath = null;
+    showScreen("cut");
+    setStep("cut");
+    requestAnimationFrame(renderCutStage);
+  }
+  function goResult(){
+    appState = "unfold";
+    showScreen("result");
+    setStep("unfold");
+    currentSavedPieceId = null;
+    document.getElementById("titleInput").value = "";
+    document.getElementById("saveStatus").textContent = "";
+    const badge = document.getElementById("resultChallengeBadge");
+    if (activeChallenge){ badge.style.display = ""; badge.textContent = "お題クリア：" + activeChallenge.title; }
+    else { badge.style.display = "none"; }
+    const c = document.getElementById("resultCanvas");
+    c.classList.remove("fade-in"); void c.offsetWidth; c.classList.add("fade-in");
+    requestAnimationFrame(renderResultStage);
+  }
+  function goCommunity(){
+    showScreen("community");
+    renderCommunityGrid();
+  }
+  function goMyworks(){
+    showScreen("myworks");
+    renderMyworksGrid();
+  }
+  function goChallengePage(){
+    showScreen("challenge");
+    const ch = todaysChallenge();
+    document.getElementById("challengePageTitle").textContent = ch.title;
+    renderChallengeGrid();
+  }
+  function goDetail(source, id){
+    detailContext = {source, id};
+    stepMode = false;
+    document.getElementById("stepControls").style.display = "none";
+    showScreen("detail");
+    renderDetailScreen();
+  }
+
+  // ---------- 紙えらび ----------
+  function renderPaperPreview(){
+    const canvas = document.getElementById("paperPreview");
+    const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+    ctx.clearRect(0,0,cssSize,cssSize);
+    ctx.fillStyle = resolveFill(ctx, "front");
+    ctx.fillRect(0,0,cssSize,cssSize);
+    ctx.fillStyle = resolveFill(ctx, "back");
+    ctx.fillRect(0, cssSize*0.72, cssSize*0.32, cssSize*0.28);
+    ctx.strokeStyle = "rgba(34,31,27,.3)"; ctx.lineWidth = 1;
+    ctx.strokeRect(0.5,0.5,cssSize-1,cssSize-1);
+  }
+  function renderPaperPicker(){
+    const frontSelect = document.getElementById("frontSelect");
+    const backSelect = document.getElementById("backSelect");
+    if (!frontSelect.dataset.built){
+      let html = `<optgroup label="無地">` +
+        SOLID_COLORS.map(c=>`<option value="solid:${c.id}">${escapeHtml(c.name)}</option>`).join("") +
+        `</optgroup><optgroup label="柄">` +
+        PATTERNS.map(p=>`<option value="pattern:${p.id}">${escapeHtml(p.name)}</option>`).join("") +
+        `</optgroup>`;
+      frontSelect.innerHTML = html;
+      backSelect.innerHTML = SOLID_COLORS.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+      frontSelect.dataset.built = "1";
+      frontSelect.addEventListener("change", ()=>{
+        const [kind,id] = frontSelect.value.split(":");
+        frontSelection = {kind, id};
+        renderPaperPreview();
+      });
+      backSelect.addEventListener("change", ()=>{
+        backColorId = backSelect.value;
+        renderPaperPreview();
+      });
+    }
+    frontSelect.value = frontSelection.kind + ":" + frontSelection.id;
+    backSelect.value = backColorId;
+    renderPaperPreview();
+  }
+
+  // ---------- 保存・公開 ----------
+  function currentTitle(){
+    const v = document.getElementById("titleInput").value.trim();
+    return v || "無題のきりがみ";
+  }
+  function buildPieceFromCurrent(){
+    return {
+      id: makeId(),
+      title: currentTitle(),
+      createdAt: Date.now(),
+      thumb: document.getElementById("resultCanvas").toDataURL("image/png"),
+      likes: 0,
+      published: false,
+      paper: { front:{...frontSelection}, backColorId },
+      challenge: activeChallenge ? activeChallenge.title : null,
+      folds: foldLog.map(f=>({A:{...f.A}, B:{...f.B}, keepPoint:{...f.keepPoint}, foldType:f.foldType})),
+      cuts: cuts.map(r=>r.map(p=>({...p})))
+    };
+  }
+  let currentSavedPieceId = null; // このできあがり画面で既に保存済みなら、そのID
+  function saveCurrentToMyworks(){
+    const list = loadList(LS_MYWORKS);
+    if (currentSavedPieceId){
+      const existing = list.find(p=>p.id===currentSavedPieceId);
+      if (existing){
+        document.getElementById("saveStatus").textContent = "「マイ作品」に保存済みです。";
+        return existing;
+      }
+    }
+    const piece = buildPieceFromCurrent();
+    currentSavedPieceId = piece.id;
+    list.unshift(piece);
+    saveList(LS_MYWORKS, list);
+    document.getElementById("saveStatus").textContent = "「マイ作品」に保存しました。";
+    return piece;
+  }
+  function publishCurrentToCommunity(){
+    const piece = saveCurrentToMyworks();
+    const mine = loadList(LS_MYWORKS);
+    const idx = mine.findIndex(p=>p.id===piece.id);
+    if (idx>=0){ mine[idx].published = true; saveList(LS_MYWORKS, mine); }
+    const community = loadList(LS_COMMUNITY);
+    if (!community.find(p=>p.id===piece.id)){
+      const copy = JSON.parse(JSON.stringify(piece));
+      copy.published = true;
+      community.unshift(copy);
+      saveList(LS_COMMUNITY, community);
+    }
+    document.getElementById("saveStatus").textContent = "「マイ作品」に保存し、みんなに公開しました。";
+  }
+
+  // ---------- ギャラリー描画 ----------
+  let communitySort = "recent"; // recent | ranking
+  function renderCommunityGrid(){
+    let list = loadList(LS_COMMUNITY);
+    if (communitySort === "ranking") list = list.slice().sort((a,b)=> b.likes - a.likes);
+    else list = list.slice().sort((a,b)=> b.createdAt - a.createdAt);
+    const grid = document.getElementById("communityGrid");
+    grid.innerHTML = "";
+    document.getElementById("communityEmpty").style.display = list.length ? "none" : "";
+    for (const piece of list){
+      grid.appendChild(buildGalleryCard(piece, "community"));
+    }
+  }
+  function renderMyworksGrid(){
+    const list = loadList(LS_MYWORKS).slice().sort((a,b)=> b.createdAt - a.createdAt);
+    const grid = document.getElementById("myworksGrid");
+    grid.innerHTML = "";
+    document.getElementById("myworksEmpty").style.display = list.length ? "none" : "";
+    for (const piece of list){
+      grid.appendChild(buildGalleryCard(piece, "myworks"));
+    }
+  }
+  let challengeSort = "recent"; // recent | ranking
+  function renderChallengeGrid(){
+    const ch = todaysChallenge();
+    let list = loadList(LS_COMMUNITY).filter(p=>p.challenge === ch.title);
+    if (challengeSort === "ranking") list = list.slice().sort((a,b)=> b.likes - a.likes);
+    else list = list.slice().sort((a,b)=> b.createdAt - a.createdAt);
+    const grid = document.getElementById("challengeGrid");
+    grid.innerHTML = "";
+    document.getElementById("challengeEmpty").style.display = list.length ? "none" : "";
+    for (const piece of list){
+      grid.appendChild(buildGalleryCard(piece, "community"));
+    }
+  }
+  function buildGalleryCard(piece, source){
+    const card = document.createElement("button");
+    card.className = "gallery-item";
+    const tag = piece.challenge ? `<span class="challenge-tag">${escapeHtml(piece.challenge)}</span>` : "";
+    card.innerHTML = `
+      <img src="${piece.thumb}" alt="">
+      <div class="g-title">${escapeHtml(piece.title)}${tag}</div>
+      <div class="g-meta"><span>❤️ ${piece.likes}</span><span>${piece.published ? "公開中" : "非公開"}</span></div>
+    `;
+    card.addEventListener("click", ()=> goDetail(source, piece.id));
+    return card;
+  }
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  // ---------- 詳細画面 ----------
+  const LS_LIKED = "kirie_liked_v1";
+  function getLikedSet(){ return new Set(loadList(LS_LIKED)); }
+  function markLiked(id){
+    const set = getLikedSet(); set.add(id);
+    saveList(LS_LIKED, Array.from(set));
+  }
+  function findPiece(source, id){
+    const list = loadList(source==="community" ? LS_COMMUNITY : LS_MYWORKS);
+    return list.find(p=>p.id===id);
+  }
+  function updatePiece(source, id, mutator){
+    const key = source==="community" ? LS_COMMUNITY : LS_MYWORKS;
+    const list = loadList(key);
+    const idx = list.findIndex(p=>p.id===id);
+    if (idx<0) return null;
+    mutator(list[idx]);
+    saveList(key, list);
+    return list[idx];
+  }
+  function renderDetailScreen(){
+    const {source, id} = detailContext;
+    const piece = findPiece(source, id);
+    if (!piece){ goHome(); return; }
+    document.getElementById("detailBadge").textContent = source==="community" ? "みんなの作品" : "マイ作品";
+    const tag = piece.challenge ? ` <span class="challenge-tag">${escapeHtml(piece.challenge)}</span>` : "";
+    document.getElementById("detailTitle").innerHTML = escapeHtml(piece.title) + tag;
+    document.getElementById("detailLikes").textContent = piece.likes;
+    document.getElementById("detailDate").textContent = new Date(piece.createdAt).toLocaleDateString("ja-JP");
+
+    const canvas = document.getElementById("detailCanvas");
+    const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+    ctx.clearRect(0,0,cssSize,cssSize);
+    const img = new Image();
+    img.onload = ()=> ctx.drawImage(img, 0, 0, cssSize, cssSize);
+    img.src = piece.thumb;
+
+    document.getElementById("detailActionsCommunity").style.display = source==="community" ? "" : "none";
+    document.getElementById("detailActionsMine").style.display = source==="myworks" ? "" : "none";
+    document.getElementById("deleteWork").style.display = source==="myworks" ? "" : "none";
+    document.getElementById("publishToggle").textContent = piece.published ? "🌐 公開をやめる" : "🌐 公開する";
+
+    const likeBtn = document.getElementById("likeBtn");
+    const alreadyLiked = getLikedSet().has(piece.id);
+    likeBtn.textContent = alreadyLiked ? "❤️ いいね済み" : "❤️ いいねする";
+    likeBtn.disabled = alreadyLiked;
+  }
+  document.getElementById("likeBtn").addEventListener("click", ()=>{
+    if (!detailContext) return;
+    if (getLikedSet().has(detailContext.id)) return; // 同じ人が同じ作品に2度いいねすることは不可
+    const updated = updatePiece("community", detailContext.id, p=>{ p.likes += 1; });
+    if (updated){
+      markLiked(detailContext.id);
+      document.getElementById("detailLikes").textContent = updated.likes;
+      const likeBtn = document.getElementById("likeBtn");
+      likeBtn.textContent = "❤️ いいね済み";
+      likeBtn.disabled = true;
+    }
+  });
+  document.getElementById("publishToggle").addEventListener("click", ()=>{
+    if (!detailContext) return;
+    const piece = findPiece("myworks", detailContext.id);
+    if (!piece) return;
+    const nowPublished = !piece.published;
+    updatePiece("myworks", detailContext.id, p=>{ p.published = nowPublished; });
+    const community = loadList(LS_COMMUNITY);
+    if (nowPublished){
+      if (!community.find(p=>p.id===piece.id)){
+        const copy = JSON.parse(JSON.stringify(piece));
+        copy.published = true;
+        community.unshift(copy);
+        saveList(LS_COMMUNITY, community);
+      }
+    } else {
+      saveList(LS_COMMUNITY, community.filter(p=>p.id!==piece.id));
+    }
+    renderDetailScreen();
+  });
+  document.getElementById("deleteWork").addEventListener("click", ()=>{
+    if (!detailContext) return;
+    if (!confirm("この作品を削除しますか？")) return;
+    saveList(LS_MYWORKS, loadList(LS_MYWORKS).filter(p=>p.id!==detailContext.id));
+    saveList(LS_COMMUNITY, loadList(LS_COMMUNITY).filter(p=>p.id!==detailContext.id));
+    goMyworks();
+  });
+  document.getElementById("shareX").addEventListener("click", ()=>{
+    if (!detailContext) return;
+    const piece = findPiece(detailContext.source, detailContext.id);
+    if (!piece) return;
+    const text = `「${piece.title}」をきりがみでつくりました #きりがみ`;
+    window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text), "_blank");
+  });
+  document.getElementById("shareNative").addEventListener("click", async ()=>{
+    if (!detailContext) return;
+    const piece = findPiece(detailContext.source, detailContext.id);
+    if (!piece) return;
+    try {
+      const res = await fetch(piece.thumb);
+      const blob = await res.blob();
+      const file = new File([blob], "kirigami.png", {type:"image/png"});
+      if (navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:piece.title, text:piece.title});
+        return;
+      }
+    } catch(e){ /* フォールバックへ */ }
+    const link = document.createElement("a");
+    link.download = "kirigami-" + Date.now() + ".png";
+    link.href = piece.thumb;
+    link.click();
+  });
+
+  // ---------- 作り方の再生（保存された折り・カットのログを再現） ----------
+  let replayRunning = false;
+  function applyPieceStyle(piece){
+    const prev = { front:{...frontSelection}, backColorId };
+    if (piece.paper){
+      frontSelection = { ...piece.paper.front };
+      backColorId = piece.paper.backColorId;
+    }
+    return prev;
+  }
+  function restoreStyle(prev){
+    frontSelection = prev.front;
+    backColorId = prev.backColorId;
+  }
+
+  async function playReplay(){
+    if (!detailContext || replayRunning) return;
+    const piece = findPiece(detailContext.source, detailContext.id);
+    if (!piece) return;
+    replayRunning = true;
+    const canvas = document.getElementById("detailCanvas");
+    const sleep = ms => new Promise(r=>setTimeout(r,ms));
+    const prevStyle = applyPieceStyle(piece);
+
+    let poly = [{x:0,y:0},{x:S,y:0},{x:S,y:S},{x:0,y:S}];
+    let simLayers = [[]];
+
+    for (const f of piece.folds){
+      const kept = clipHalfPlane(poly, f.A, f.B, f.keepPoint);
+      const oppKeep = reflectPoint(f.keepPoint, f.A, f.B);
+      const flap = clipHalfPlane(poly, f.A, f.B, oppKeep);
+      if (kept.length<3 || flap.length<3){ poly = kept.length>=3?kept:poly; continue; }
+      await replayFoldAnimation(canvas, poly, kept, flap, f.A, f.B);
+      const newLayers = [];
+      for (const rl of simLayers){ newLayers.push(rl); newLayers.push([{A:f.A,B:f.B}, ...rl]); }
+      simLayers = newLayers;
+      poly = kept;
+    }
+
+    await sleep(250);
+    for (let i=0;i<piece.cuts.length;i++){
+      replayRenderCutProgress(canvas, poly, piece.cuts.slice(0,i+1));
+      await sleep(320);
+    }
+    await sleep(350);
+    replayRenderFinal(canvas, poly, simLayers, piece.cuts);
+    restoreStyle(prevStyle);
+    replayRunning = false;
+  }
+
+  // ---------- コマ送り再生 ----------
+  let stepMode = false;
+  let stepIndex = -1;
+  let stepList = [];
+  function foldTypeLabel(type){
+    return type==="V" ? "たて折り" : type==="H" ? "よこ折り" : type==="D" ? "ななめ折り" : "じゆうな折り";
+  }
+  function buildStepList(piece){
+    return [...piece.folds.map(f=>({type:"fold", f})), ...piece.cuts.map(c=>({type:"cut", region:c})), {type:"final"}];
+  }
+  function computeStateAtStep(piece, index){
+    let poly = [{x:0,y:0},{x:S,y:0},{x:S,y:S},{x:0,y:S}];
+    let layersSim = [[]];
+    let cutsShown = 0, isFinal = false;
+    for (let i=0;i<=index;i++){
+      const step = stepList[i];
+      if (step.type === "fold"){
+        const kept = clipHalfPlane(poly, step.f.A, step.f.B, step.f.keepPoint);
+        const opp = reflectPoint(step.f.keepPoint, step.f.A, step.f.B);
+        const flap = clipHalfPlane(poly, step.f.A, step.f.B, opp);
+        if (kept.length>=3 && flap.length>=3){
+          const newLayers=[]; for (const rl of layersSim){ newLayers.push(rl); newLayers.push([{A:step.f.A,B:step.f.B},...rl]); }
+          layersSim = newLayers; poly = kept;
+        }
+      } else if (step.type === "cut"){ cutsShown++; }
+      else if (step.type === "final"){ isFinal = true; }
+    }
+    return { poly, layersSim, cutsShown, isFinal };
+  }
+  function renderStepFrame(){
+    if (!detailContext) return;
+    const piece = findPiece(detailContext.source, detailContext.id);
+    if (!piece) return;
+    const prevStyle = applyPieceStyle(piece);
+    const canvas = document.getElementById("detailCanvas");
+    if (stepIndex < 0){
+      const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+      ctx.clearRect(0,0,cssSize,cssSize);
+      const vt = getViewTransform(cssSize, [{x:0,y:0},{x:S,y:0},{x:S,y:S},{x:0,y:S}]);
+      drawPaperPolygon(ctx, [{x:0,y:0},{x:S,y:0},{x:S,y:S},{x:0,y:S}].map(p=>toScreen(p,vt)), "front", 1);
+    } else if (stepList[stepIndex].type === "fold"){
+      // この折りの直前の紙の形に、折り線（クレース）を重ねて見せる
+      const before = stepIndex===0 ? { poly:[{x:0,y:0},{x:S,y:0},{x:S,y:S},{x:0,y:S}] } : computeStateAtStep(piece, stepIndex-1);
+      const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+      ctx.clearRect(0,0,cssSize,cssSize);
+      const vt = getViewTransform(cssSize, before.poly);
+      drawPaperPolygon(ctx, before.poly.map(p=>toScreen(p,vt)), "front", 1);
+      const f = stepList[stepIndex].f;
+      const A = toScreen(f.A, vt), B = toScreen(f.B, vt);
+      ctx.save();
+      ctx.strokeStyle = "#BF4B2C"; ctx.lineWidth = 2.5; ctx.setLineDash([6,5]);
+      ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke();
+      ctx.restore();
+    } else {
+      const state = computeStateAtStep(piece, stepIndex);
+      if (state.isFinal) replayRenderFinal(canvas, state.poly, state.layersSim, piece.cuts);
+      else replayRenderCutProgress(canvas, state.poly, piece.cuts.slice(0, state.cutsShown));
+    }
+    restoreStyle(prevStyle);
+    let label;
+    if (stepIndex < 0){ label = "はじめる前"; }
+    else if (stepList[stepIndex].type === "fold"){
+      const n = stepList.slice(0,stepIndex+1).filter(s=>s.type==="fold").length;
+      label = `折り ${n}回目：${foldTypeLabel(stepList[stepIndex].f.foldType)}`;
+    } else if (stepList[stepIndex].type === "cut"){
+      const n = stepList.slice(0,stepIndex+1).filter(s=>s.type==="cut").length;
+      label = `カット ${n}回目`;
+    } else { label = "できあがり"; }
+    document.getElementById("stepLabel").textContent = `${stepIndex+1} / ${stepList.length}　―　${label}`;
+    document.getElementById("stepPrev").disabled = stepIndex < 0;
+    document.getElementById("stepNext").disabled = stepIndex >= stepList.length-1;
+  }
+  function enterStepMode(){
+    if (!detailContext) return;
+    const piece = findPiece(detailContext.source, detailContext.id);
+    if (!piece) return;
+    stepMode = true;
+    stepList = buildStepList(piece);
+    stepIndex = -1;
+    document.getElementById("stepControls").style.display = "";
+    renderStepFrame();
+  }
+  function replayFoldAnimation(canvas, oldPolygon, keptPiece, flapPiece, A, B){
+    return new Promise(resolve=>{
+      const vt = getViewTransform(canvas.getBoundingClientRect().width, oldPolygon);
+      const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy)||1;
+      const dirUnit={x:dx/len,y:dy/len}, normalUnit={x:-dirUnit.y,y:dirUnit.x};
+      const duration = 420;
+      const start = performance.now();
+      function frame(now){
+        const raw = Math.min(1, (now-start)/duration);
+        const t = easeInOutQuad(raw);
+        const s = 1-2*t;
+        const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+        ctx.clearRect(0,0,cssSize,cssSize);
+        drawPaperPolygon(ctx, keptPiece.map(p=>toScreen(p,vt)), "front", 1);
+        const animatedFlap = flapPiece.map(p=>{
+          const {along, perp} = decompose(p, A, dirUnit, normalUnit);
+          return recompose(along, perp*s, A, dirUnit, normalUnit);
+        });
+        const flapColor = s>=0 ? "front" : "back";
+        drawPaperPolygon(ctx, animatedFlap.map(p=>toScreen(p,vt)), flapColor, 0.7+0.3*Math.abs(s));
+        if (raw<1) requestAnimationFrame(frame); else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+  function replayRenderCutProgress(canvas, poly, cutsSoFar){
+    const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+    ctx.clearRect(0,0,cssSize,cssSize);
+    const vt = getViewTransform(cssSize, poly);
+    const screenPoly = poly.map(p=>toScreen(p,vt));
+    drawPaperPolygon(ctx, screenPoly, "front", 1);
+    ctx.save();
+    drawPolygonPath(ctx, screenPoly);
+    ctx.clip();
+    ctx.globalCompositeOperation = "destination-out";
+    for (const region of cutsSoFar){
+      if (region.length<3) continue;
+      drawPolygonPath(ctx, region.map(p=>toScreen(p,vt)));
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  function replayRenderFinal(canvas, poly, simLayers, cutsAll){
+    const {ctx, cssSize} = setupCanvasHiDPI(canvas);
+    ctx.clearRect(0,0,cssSize,cssSize);
+    const scale = cssSize / S;
+    const off = document.createElement("canvas");
+    off.width = cssSize; off.height = cssSize;
+    const offCtx = off.getContext("2d");
+    offCtx.fillStyle = resolveFill(offCtx, "front");
+    offCtx.fillRect(0,0,cssSize,cssSize);
+    offCtx.globalCompositeOperation = "destination-out";
+    for (const region of cutsAll){
+      if (region.length<3) continue;
+      for (const reflList of simLayers){
+        const pts = region.map(p=>{ const w=applyReflList(p,reflList); return {x:w.x*scale,y:w.y*scale}; });
+        offCtx.beginPath();
+        pts.forEach((p,i)=> i===0?offCtx.moveTo(p.x,p.y):offCtx.lineTo(p.x,p.y));
+        offCtx.closePath();
+        offCtx.fill();
+      }
+    }
+    ctx.save();
+    ctx.shadowColor = "rgba(35,28,15,.4)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 3;
+    ctx.drawImage(off, 0, 0, cssSize, cssSize);
+    ctx.restore();
+  }
+
+  // ---------- イベント配線 ----------
+  document.getElementById("goCreate").addEventListener("click", ()=>{ activeChallenge = null; resetFold(); openPaperPicker(); });
+  document.getElementById("goChallenge").addEventListener("click", goChallengePage);
+  document.getElementById("challengeCreateBtn").addEventListener("click", ()=>{ activeChallenge = todaysChallenge(); resetFold(); openPaperPicker(); });
+  document.getElementById("challengeSortRecent").addEventListener("click", ()=>{
+    challengeSort="recent";
+    document.getElementById("challengeSortRecent").classList.add("active");
+    document.getElementById("challengeSortRanking").classList.remove("active");
+    renderChallengeGrid();
+  });
+  document.getElementById("challengeSortRanking").addEventListener("click", ()=>{
+    challengeSort="ranking";
+    document.getElementById("challengeSortRanking").classList.add("active");
+    document.getElementById("challengeSortRecent").classList.remove("active");
+    renderChallengeGrid();
+  });
+  document.getElementById("paperNext").addEventListener("click", goFold);
+  document.getElementById("goCommunity").addEventListener("click", goCommunity);
+  document.getElementById("goMyworks").addEventListener("click", goMyworks);
+  document.getElementById("backHome").addEventListener("click", goHome);
+
+  document.getElementById("sortRecent").addEventListener("click", ()=>{
+    communitySort="recent";
+    document.getElementById("sortRecent").classList.add("active");
+    document.getElementById("sortRanking").classList.remove("active");
+    renderCommunityGrid();
+  });
+  document.getElementById("sortRanking").addEventListener("click", ()=>{
+    communitySort="ranking";
+    document.getElementById("sortRanking").classList.add("active");
+    document.getElementById("sortRecent").classList.remove("active");
+    renderCommunityGrid();
+  });
+
+  document.getElementById("playAutoBtn").addEventListener("click", ()=>{
+    document.getElementById("stepControls").style.display = "none";
+    playReplay();
+  });
+  document.getElementById("stepModeBtn").addEventListener("click", enterStepMode);
+  document.getElementById("stepPrev").addEventListener("click", ()=>{
+    if (stepIndex >= 0){ stepIndex--; renderStepFrame(); }
+  });
+  document.getElementById("stepNext").addEventListener("click", ()=>{
+    if (stepIndex < stepList.length-1){ stepIndex++; renderStepFrame(); }
+  });
+
+  document.getElementById("foldV").addEventListener("click", ()=>doFold("V"));
+  document.getElementById("foldH").addEventListener("click", ()=>doFold("H"));
+  document.getElementById("foldD").addEventListener("click", ()=>doFold("D"));
+  document.getElementById("undoFold").addEventListener("click", undoFold);
+  document.getElementById("resetFold").addEventListener("click", resetFold);
+  document.getElementById("toCut").addEventListener("click", goCut);
+
+  document.getElementById("backToFold").addEventListener("click", goFold);
+  document.getElementById("undoCut").addEventListener("click", undoCut);
+  document.getElementById("resetCut").addEventListener("click", resetCutStage);
+  document.getElementById("toUnfold").addEventListener("click", goResult);
+
+  document.getElementById("makeAnother").addEventListener("click", ()=>{
+    const proceed = ()=>{ activeChallenge = null; resetFold(); openPaperPicker(); };
+    if (typeof maybeShowInterstitial === "function") maybeShowInterstitial().finally(proceed);
+    else proceed();
+  });
+  document.getElementById("saveImg").addEventListener("click", ()=>{
+    const canvas = document.getElementById("resultCanvas");
+    const link = document.createElement("a");
+    link.download = "kirigami-" + Date.now() + ".png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+  document.getElementById("saveWork").addEventListener("click", ()=>{ saveCurrentToMyworks(); });
+  document.getElementById("publishWork").addEventListener("click", ()=>{ publishCurrentToCommunity(); });
+
+  attachFoldPointerHandlers();
+  attachCutPointerHandlers();
+
+  window.addEventListener("resize", ()=>{
+    if (currentScreen === "fold") renderFoldStage();
+    else if (currentScreen === "cut") renderCutStage();
+    else if (currentScreen === "result") renderResultStage();
+    else if (currentScreen === "detail") renderDetailScreen();
+  });
+
+  updateFoldUI();
+  document.getElementById("challengeTeaser").textContent = todaysChallenge().title;
+  showScreen("home");
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(()=>{ /* オフライン対応なしでも通常動作は継続 */ });
+    });
+  }
+</script>
+<script>
+  // ---------- 広告（AdMob） ----------
+  // 本番申請の直前に isTesting を false にし、Banner/Interstitial IDを実際のAdMobで
+  // 取得したものに差し替えてください（すごろくラボ等と同じパターン）。
+  const AD_CONFIG = {
+    isTesting: true, // ストア申請の直前に false へ。実際に配信される広告に切り替わります
+    android: {
+      appId: "ca-app-pub-8174756915786797~5552357927",
+      bannerId: "ca-app-pub-8174756915786797/7136902337",
+      interstitialId: "ca-app-pub-8174756915786797/9603283570",
+    },
+    ios: {
+      appId: "ca-app-pub-8174756915786797~5104655426",
+      bannerId: "ca-app-pub-8174756915786797/5472466870",
+      interstitialId: "ca-app-pub-8174756915786797/8258412316",
+    },
+  };
+  function currentAdIds(){
+    const platform = (window.Capacitor && window.Capacitor.getPlatform) ? window.Capacitor.getPlatform() : "android";
+    return AD_CONFIG[platform] || AD_CONFIG.android;
+  }
+
+  function getAdMob(){
+    return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) || null;
+  }
+  function debugAdStatus(msg){
+    console.log("[ads]", msg);
+    window.__adDebugLog = window.__adDebugLog || [];
+    window.__adDebugLog.push(msg);
+  }
+
+  let adsReady = false;
+  async function initAds(){
+    const AdMob = getAdMob();
+    if (!AdMob){
+      debugAdStatus("window.Capacitor.Plugins.AdMob が見つかりません（プラグイン未インストール／未sync、またはブラウザ実行中）");
+      return;
+    }
+    try {
+      debugAdStatus("AdMob.initialize を呼び出します…");
+      await AdMob.initialize({ initializeForTesting: AD_CONFIG.isTesting });
+      debugAdStatus("initialize 成功。バナーを表示します…");
+      await AdMob.showBanner({
+        adId: currentAdIds().bannerId,
+        adSize: "ADAPTIVE_BANNER",
+        position: "BOTTOM_CENTER",
+        margin: 0,
+        isTesting: AD_CONFIG.isTesting,
+      });
+      document.body.classList.add("has-banner");
+      adsReady = true;
+      debugAdStatus("バナー表示 成功");
+    } catch (e) {
+      debugAdStatus("エラー: " + (e && (e.message || JSON.stringify(e))));
+    }
+  }
+
+  async function maybeShowInterstitial(){
+    const AdMob = getAdMob();
+    if (!AdMob) return;
+    try {
+      await AdMob.prepareInterstitial({ adId: currentAdIds().interstitialId, isTesting: AD_CONFIG.isTesting });
+      await AdMob.showInterstitial();
+    } catch (e) {
+      debugAdStatus("インタースティシャル エラー: " + (e && (e.message || JSON.stringify(e))));
+    }
+  }
+
+  window.addEventListener("load", initAds);
+</script>
+</body>
+</html>

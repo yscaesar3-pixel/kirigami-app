@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">きりがみ</string>
+    <string name="title_activity_main">きりがみ</string>
+    <string name="package_name">com.yutaXXX.kirigami</string>
+    <string name="custom_url_scheme">com.yutaXXX.kirigami</string>
+</resources>
