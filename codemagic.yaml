@@ -10,11 +10,10 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.yutaXXX.kirigami
       vars:
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
       node: latest
       xcode: latest
-      cocoapods: default
     triggering:
       events:
         - push
@@ -32,10 +31,6 @@ workflows:
         script: |
           npx cap sync ios
 
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App && pod install
-
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
@@ -43,7 +38,7 @@ workflows:
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
