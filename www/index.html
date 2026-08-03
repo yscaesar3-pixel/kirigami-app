@@ -1447,7 +1447,6 @@
 
   // ---------- 保存データ（この端末内のlocalStorage） ----------
   const LS_MYWORKS = "kirie_myworks_v1";
-  const LS_COMMUNITY = "kirie_community_v1";
   function loadList(key){
     try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; }
     catch(e){ return []; }
@@ -1456,6 +1455,116 @@
     try { localStorage.setItem(key, JSON.stringify(list)); } catch(e){ /* 容量超過などは無視 */ }
   }
   function makeId(){ return "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,8); }
+
+  // ---------- Supabase（みんなの作品・いいねの実データ） ----------
+  const SUPABASE_URL = "https://arpkjnbnyyytdcbzeitk.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFycGtqbmJueXl5dGRjYnplaXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MDk1NTgsImV4cCI6MjA5OTM4NTU1OH0.wMED0yZ1j6ygAIIPr5zw9As25xx9QqL0YbSICaK6UVo";
+  const SUPABASE_SCHEMA = "kirigami";
+
+  function getDeviceId(){
+    let id = localStorage.getItem("kirigami_device_id");
+    if (!id){
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : ("dev-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
+      localStorage.setItem("kirigami_device_id", id);
+    }
+    return id;
+  }
+
+  async function sbFetch(path, options){
+    options = options || {};
+    const method = (options.method || "GET").toUpperCase();
+    const isWrite = method !== "GET" && method !== "HEAD";
+    const headers = Object.assign({
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+    }, {}, options.headers || {});
+    headers[isWrite ? "Content-Profile" : "Accept-Profile"] = SUPABASE_SCHEMA;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, Object.assign({}, options, {headers}));
+    return res;
+  }
+
+  // Supabaseの行（スネークケース）を、アプリ内部で使っている形（キャメルケース）に変換
+  function mapRemoteRow(row){
+    return {
+      id: row.id,
+      title: row.title,
+      createdAt: new Date(row.created_at).getTime(),
+      thumb: row.thumb,
+      likes: row.likes || 0,
+      published: row.published,
+      paper: row.paper,
+      challenge: row.challenge,
+      folds: row.folds || [],
+      cuts: row.cuts || [],
+      remoteId: row.id,
+    };
+  }
+
+  async function publishPieceToSupabase(piece){
+    const body = {
+      title: piece.title,
+      thumb: piece.thumb,
+      paper: piece.paper,
+      challenge: piece.challenge,
+      folds: piece.folds,
+      cuts: piece.cuts,
+      device_id: getDeviceId(),
+      published: true,
+    };
+    const res = await sbFetch("pieces", {
+      method: "POST",
+      headers: { "Prefer": "return=representation" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error("publish failed: " + res.status);
+    const rows = await res.json();
+    return mapRemoteRow(rows[0]);
+  }
+
+  async function setPublishedOnSupabase(remoteId, published){
+    const res = await sbFetch(`pieces?id=eq.${remoteId}`, {
+      method: "PATCH",
+      headers: { "Prefer": "return=minimal" },
+      body: JSON.stringify({ published }),
+    });
+    if (!res.ok) throw new Error("update failed: " + res.status);
+  }
+
+  async function deletePieceFromSupabase(remoteId){
+    const res = await sbFetch(`pieces?id=eq.${remoteId}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 404) throw new Error("delete failed: " + res.status);
+  }
+
+  async function fetchPiecesFromSupabase({ challenge, sort } = {}){
+    const order = sort === "ranking" ? "likes.desc" : "created_at.desc";
+    let path = `pieces_with_likes?published=eq.true&order=${order}&limit=100`;
+    if (challenge) path += `&challenge=eq.${encodeURIComponent(challenge)}`;
+    const res = await sbFetch(path);
+    if (!res.ok) throw new Error("fetch failed: " + res.status);
+    const rows = await res.json();
+    return rows.map(mapRemoteRow);
+  }
+
+  async function fetchSinglePieceFromSupabase(id){
+    const res = await sbFetch(`pieces_with_likes?id=eq.${id}&limit=1`);
+    if (!res.ok) throw new Error("fetch failed: " + res.status);
+    const rows = await res.json();
+    return rows.length ? mapRemoteRow(rows[0]) : null;
+  }
+
+  // 戻り値: {alreadyLiked: bool} / 失敗時は例外
+  async function likePieceOnSupabase(pieceId){
+    const res = await sbFetch("likes", {
+      method: "POST",
+      headers: { "Prefer": "return=minimal" },
+      body: JSON.stringify({ piece_id: pieceId, device_id: getDeviceId() }),
+    });
+    if (res.status === 409) return { alreadyLiked: true };
+    if (!res.ok) throw new Error("like failed: " + res.status);
+    return { alreadyLiked: false };
+  }
 
   // ---------- 画面遷移 ----------
   const SCREEN_IDS = ["home","challenge","paper","fold","cut","result","community","myworks","detail"];
@@ -1610,32 +1719,43 @@
     document.getElementById("saveStatus").textContent = "「マイ作品」に保存しました。";
     return piece;
   }
-  function publishCurrentToCommunity(){
+  async function publishCurrentToCommunity(){
     const piece = saveCurrentToMyworks();
-    const mine = loadList(LS_MYWORKS);
-    const idx = mine.findIndex(p=>p.id===piece.id);
-    if (idx>=0){ mine[idx].published = true; saveList(LS_MYWORKS, mine); }
-    const community = loadList(LS_COMMUNITY);
-    if (!community.find(p=>p.id===piece.id)){
-      const copy = JSON.parse(JSON.stringify(piece));
-      copy.published = true;
-      community.unshift(copy);
-      saveList(LS_COMMUNITY, community);
+    document.getElementById("saveStatus").textContent = "公開しています…";
+    try {
+      const remote = await publishPieceToSupabase(piece);
+      const mine = loadList(LS_MYWORKS);
+      const idx = mine.findIndex(p=>p.id===piece.id);
+      if (idx>=0){
+        mine[idx].published = true;
+        mine[idx].remoteId = remote.id;
+        saveList(LS_MYWORKS, mine);
+      }
+      document.getElementById("saveStatus").textContent = "「マイ作品」に保存し、みんなに公開しました。";
+    } catch (e) {
+      document.getElementById("saveStatus").textContent = "公開に失敗しました。電波の良い場所でもう一度お試しください。";
     }
-    document.getElementById("saveStatus").textContent = "「マイ作品」に保存し、みんなに公開しました。";
   }
 
   // ---------- ギャラリー描画 ----------
   let communitySort = "recent"; // recent | ranking
-  function renderCommunityGrid(){
-    let list = loadList(LS_COMMUNITY);
-    if (communitySort === "ranking") list = list.slice().sort((a,b)=> b.likes - a.likes);
-    else list = list.slice().sort((a,b)=> b.createdAt - a.createdAt);
+  let communityCache = [];
+  async function renderCommunityGrid(){
     const grid = document.getElementById("communityGrid");
+    const empty = document.getElementById("communityEmpty");
     grid.innerHTML = "";
-    document.getElementById("communityEmpty").style.display = list.length ? "none" : "";
-    for (const piece of list){
-      grid.appendChild(buildGalleryCard(piece, "community"));
+    empty.style.display = "none";
+    grid.innerHTML = `<p class="hint">読み込み中…</p>`;
+    try {
+      const list = await fetchPiecesFromSupabase({ sort: communitySort });
+      communityCache = list;
+      grid.innerHTML = "";
+      empty.style.display = list.length ? "none" : "";
+      for (const piece of list){
+        grid.appendChild(buildGalleryCard(piece, "community"));
+      }
+    } catch (e) {
+      grid.innerHTML = `<p class="hint">読み込みに失敗しました。電波の良い場所でもう一度開いてみてください。</p>`;
     }
   }
   function renderMyworksGrid(){
@@ -1648,16 +1768,23 @@
     }
   }
   let challengeSort = "recent"; // recent | ranking
-  function renderChallengeGrid(){
+  let challengeCache = [];
+  async function renderChallengeGrid(){
     const ch = todaysChallenge();
-    let list = loadList(LS_COMMUNITY).filter(p=>p.challenge === ch.title);
-    if (challengeSort === "ranking") list = list.slice().sort((a,b)=> b.likes - a.likes);
-    else list = list.slice().sort((a,b)=> b.createdAt - a.createdAt);
     const grid = document.getElementById("challengeGrid");
-    grid.innerHTML = "";
-    document.getElementById("challengeEmpty").style.display = list.length ? "none" : "";
-    for (const piece of list){
-      grid.appendChild(buildGalleryCard(piece, "community"));
+    const empty = document.getElementById("challengeEmpty");
+    grid.innerHTML = `<p class="hint">読み込み中…</p>`;
+    empty.style.display = "none";
+    try {
+      const list = await fetchPiecesFromSupabase({ challenge: ch.title, sort: challengeSort });
+      challengeCache = list;
+      grid.innerHTML = "";
+      empty.style.display = list.length ? "none" : "";
+      for (const piece of list){
+        grid.appendChild(buildGalleryCard(piece, "community"));
+      }
+    } catch (e) {
+      grid.innerHTML = `<p class="hint">読み込みに失敗しました。電波の良い場所でもう一度開いてみてください。</p>`;
     }
   }
   function buildGalleryCard(piece, source){
@@ -1684,21 +1811,30 @@
     saveList(LS_LIKED, Array.from(set));
   }
   function findPiece(source, id){
-    const list = loadList(source==="community" ? LS_COMMUNITY : LS_MYWORKS);
+    if (source === "community"){
+      return communityCache.find(p=>p.id===id) || challengeCache.find(p=>p.id===id) || null;
+    }
+    const list = loadList(LS_MYWORKS);
     return list.find(p=>p.id===id);
   }
   function updatePiece(source, id, mutator){
-    const key = source==="community" ? LS_COMMUNITY : LS_MYWORKS;
-    const list = loadList(key);
+    // マイ作品（端末内）のみ対象。みんなの作品側はSupabase専用の関数群で直接操作します。
+    const list = loadList(LS_MYWORKS);
     const idx = list.findIndex(p=>p.id===id);
     if (idx<0) return null;
     mutator(list[idx]);
-    saveList(key, list);
+    saveList(LS_MYWORKS, list);
     return list[idx];
   }
-  function renderDetailScreen(){
+  async function renderDetailScreen(){
     const {source, id} = detailContext;
-    const piece = findPiece(source, id);
+    let piece = findPiece(source, id);
+    if (!piece && source === "community"){
+      try {
+        piece = await fetchSinglePieceFromSupabase(id);
+        if (piece) communityCache.push(piece);
+      } catch(e){ /* fall through */ }
+    }
     if (!piece){ goHome(); return; }
     document.getElementById("detailBadge").textContent = source==="community" ? "みんなの作品" : "マイ作品";
     const tag = piece.challenge ? ` <span class="challenge-tag">${escapeHtml(piece.challenge)}</span>` : "";
@@ -1723,42 +1859,61 @@
     likeBtn.textContent = alreadyLiked ? "❤️ いいね済み" : "❤️ いいねする";
     likeBtn.disabled = alreadyLiked;
   }
-  document.getElementById("likeBtn").addEventListener("click", ()=>{
+  document.getElementById("likeBtn").addEventListener("click", async ()=>{
     if (!detailContext) return;
-    if (getLikedSet().has(detailContext.id)) return; // 同じ人が同じ作品に2度いいねすることは不可
-    const updated = updatePiece("community", detailContext.id, p=>{ p.likes += 1; });
-    if (updated){
-      markLiked(detailContext.id);
-      document.getElementById("detailLikes").textContent = updated.likes;
-      const likeBtn = document.getElementById("likeBtn");
+    const pieceId = detailContext.id;
+    if (getLikedSet().has(pieceId)) return; // この端末では既にいいね済み（即time UI用のキャッシュ）
+    const likeBtn = document.getElementById("likeBtn");
+    likeBtn.disabled = true;
+    likeBtn.textContent = "…";
+    try {
+      const result = await likePieceOnSupabase(pieceId);
+      markLiked(pieceId); // サーバー側が既にいいね済み(409)と言った場合も、次回から無駄打ちしないよう記録
+      if (!result.alreadyLiked){
+        const current = parseInt(document.getElementById("detailLikes").textContent, 10) || 0;
+        document.getElementById("detailLikes").textContent = current + 1;
+      }
       likeBtn.textContent = "❤️ いいね済み";
       likeBtn.disabled = true;
+    } catch (e) {
+      likeBtn.textContent = "❤️ いいねする";
+      likeBtn.disabled = false;
+      document.getElementById("saveStatus") && (document.getElementById("saveStatus").textContent = "");
     }
   });
-  document.getElementById("publishToggle").addEventListener("click", ()=>{
+  document.getElementById("publishToggle").addEventListener("click", async ()=>{
     if (!detailContext) return;
     const piece = findPiece("myworks", detailContext.id);
     if (!piece) return;
     const nowPublished = !piece.published;
-    updatePiece("myworks", detailContext.id, p=>{ p.published = nowPublished; });
-    const community = loadList(LS_COMMUNITY);
-    if (nowPublished){
-      if (!community.find(p=>p.id===piece.id)){
-        const copy = JSON.parse(JSON.stringify(piece));
-        copy.published = true;
-        community.unshift(copy);
-        saveList(LS_COMMUNITY, community);
+    const toggleBtn = document.getElementById("publishToggle");
+    toggleBtn.disabled = true;
+    try {
+      if (nowPublished){
+        if (piece.remoteId){
+          await setPublishedOnSupabase(piece.remoteId, true);
+        } else {
+          const remote = await publishPieceToSupabase(piece);
+          updatePiece("myworks", piece.id, p=>{ p.remoteId = remote.id; });
+        }
+      } else if (piece.remoteId){
+        await setPublishedOnSupabase(piece.remoteId, false);
       }
-    } else {
-      saveList(LS_COMMUNITY, community.filter(p=>p.id!==piece.id));
+      updatePiece("myworks", piece.id, p=>{ p.published = nowPublished; });
+    } catch (e) {
+      // 失敗時は状態を変えない
     }
+    toggleBtn.disabled = false;
     renderDetailScreen();
   });
-  document.getElementById("deleteWork").addEventListener("click", ()=>{
+  document.getElementById("deleteWork").addEventListener("click", async ()=>{
     if (!detailContext) return;
     if (!confirm("この作品を削除しますか？")) return;
+    const piece = findPiece("myworks", detailContext.id);
+    if (piece && piece.remoteId){
+      try { await deletePieceFromSupabase(piece.remoteId); } catch(e){ /* ローカルだけでも消す */ }
+    }
     saveList(LS_MYWORKS, loadList(LS_MYWORKS).filter(p=>p.id!==detailContext.id));
-    saveList(LS_COMMUNITY, loadList(LS_COMMUNITY).filter(p=>p.id!==detailContext.id));
     goMyworks();
   });
   document.getElementById("shareX").addEventListener("click", ()=>{
