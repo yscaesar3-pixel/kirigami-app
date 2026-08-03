@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-8174756915786797~5104655426</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>広告を表示するために使用します。</string>
 </dict>
 </plist>
